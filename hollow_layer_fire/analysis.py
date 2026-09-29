@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""중공층(PIR) 화재시험 – 화원 상부 높이별 온도이력 · 화재확산 속도 · 성장식(at², 지수, 멱법칙) 분석.
+"""중공층(PIR) 화재시험 – 높이별 온도이력 · 화재확산 · 성장(at²) 경향 분석.
 
-Hollow-layer (cavity) fire test: temperature logs at 2000/2500/3000 mm above the
-fire source plus 600/700/800 °C arrival times at 500–3000 mm.
+Hollow-layer (cavity) fire test, PIR specimen 2: 1 Hz temperature logs at
+500–3000 mm above the fire source (sheet 'sc_2 max', one column per height).
 
-    python analysis.py                      # reads data/test.xlsx
-    python analysis.py --xlsx other.xlsx    # same layout (sheet 'sc_2 max')
+    python analysis.py                      # reads data/PIR_2_max.xlsx
+    python analysis.py --xlsx other.xlsx    # same layout: time column 's' + PIR_<n>_<height> columns
 
 Writes figures/*.png, results/*.csv and results/summary.json next to this file.
 """
@@ -15,89 +15,89 @@ import argparse
 import csv
 import json
 import re
-import zipfile
 from pathlib import Path
-from xml.etree import ElementTree as ET
 
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.ticker  # noqa: E402
+import matplotlib.patheffects as pe  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker  # noqa: E402
 import numpy as np  # noqa: E402
 import openpyxl  # noqa: E402
 from scipy import optimize, stats  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 SHEET = "sc_2 max"
-LOG_COLUMNS = {2000: "F", 2500: "G", 3000: "H"}  # 1 Hz logs, time (s) in column B
-END_OF_RECORD_S = 1800   # from 1807 s every channel falls to ~35 °C within 5-8 s (end of test) -> excluded
-PHASE_I_END_S = 70       # end of the initial source-driven rise (visual, for shading only)
-PLATEAU_S = (100, 340)   # phase II: quasi-steady plateau
-ONSET_RISE_C = 30        # phase III starts when the running max exceeds plateau + 30 °C
-THRESHOLDS = (400, 500, 600, 700, 800, 900, 1000)
-SUSTAIN_S = 30           # "for at least 30 s" variant of the arrival criterion (KS F 8414 / BS 8414 style)
-BURNOUT_C = 600          # burn-out front: first drop below this after the peak
-PRINTED_K = {2000: 0.0012, 2500: 0.0013, 3000: 0.0014}  # exponents as printed on the Excel chart
+END_OF_RECORD_S = 1800     # from 1807 s every channel falls to ~35 °C within 5–8 s (end of test) -> excluded
+PLATEAU_S = (100, 340)     # phase II: quasi-steady plateau under the fire source
+ONSET_RISE_C = 30          # phase III starts when the running max exceeds plateau + 30 °C
+MIN_GROWTH_RISE_C = 150    # smaller phase-III rise = level already inside the flame (no growth fit)
+THRESHOLDS = (300, 400, 500, 600, 700, 800, 900, 1000)
+ISOTHERMS = (500, 600, 800)
+SUSTAIN_S = 30             # "for at least 30 s" (KS F 8414 / BS 8414 style)
+BURNOUT_C = 600            # burn-out front: first drop below this after the peak
+EVENT_AFTER_S = 1100       # search window for the simultaneous late cooling
+EVENT_RATE = -2.0          # °C/s (11-s moving average)
+PROFILE_TIMES = (60, 300, 600, 900, 1200)
+POST_EVENT_TIMES = (1230, 1290, 1350)
+DWELL_S = 30               # hottest level must hold this long to count as a change
+
+# The earlier Excel chart (test.xlsx, chart3): exponential trendlines with 'Set Intercept'
+EXCEL_A = {2000: 350.0, 2500: 250.0, 3000: 150.0}
+EXCEL_PRINTED_K = {2000: 0.0012, 2500: 0.0013, 3000: 0.0014}
+EXCEL_LEVELS = np.array([400.0, 500.0, 600.0, 700.0, 800.0])
 UNIFIED_H_REF, UNIFIED_T_REF = 2000.0, 400.0
 
-# chart tokens (dataviz reference palette, light surface)
+# chart tokens (dataviz reference palette, light surface; ramps validated as ordinal)
 SURFACE, INK, INK2, MUTED = "#fcfcfb", "#0b0b0b", "#52514e", "#898781"
-GRID, AXIS, BAND1, BAND2 = "#e1e0d9", "#c3c2b7", "#efeee9", "#f6f5f1"
-HEIGHT_COLOR = {2000: "#2a78d6", 2500: "#eb6834", 3000: "#1baf7a"}
-HEIGHT_MARKER = {2000: "D", 2500: "s", 3000: "^"}
-ISO_COLOR = {600: "#86b6ef", 700: "#2a78d6", 800: "#104281"}  # ordinal blue ramp (validated)
+GRID, AXIS, BAND = "#e1e0d9", "#c3c2b7", "#efeee9"
+HEIGHT_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
+HEIGHT_MARKERS = ["o", "s", "^", "D", "p", "h", "v", "P"]
+BLUE_RAMP = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"]
+ORANGE_RAMP = ["#ef8a5c", "#d9582a", "#9c3d17"]
+ISO_COLOR = {500: BLUE_RAMP[0], 600: BLUE_RAMP[2], 700: BLUE_RAMP[3], 800: BLUE_RAMP[4], 900: INK}
 PEAK_COLOR, BURN_COLOR = "#eb6834", INK2
+trapezoid = getattr(np, "trapezoid", None) or np.trapz
 
 
 def rms(x):
     return float(np.sqrt(np.mean(np.square(x))))
 
 
+def smooth(y, w=11):
+    """Centred moving average that ignores NaN."""
+    ok = np.isfinite(y)
+    k = np.ones(w)
+    num = np.convolve(np.pad(np.where(ok, y, 0.0), w // 2, mode="edge"), k, mode="valid")
+    den = np.convolve(np.pad(ok.astype(float), w // 2, mode="edge"), k, mode="valid")
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(den > w / 2, num / den, np.nan)
+
+
 # ----------------------------------------------------------------------------- data
 
-def read_workbook(path: Path):
+def read_logs(path: Path):
+    """Time vector and {height_mm: temperature} from the first block of PIR_<n>_<height> columns."""
     ws = openpyxl.load_workbook(path, data_only=True)[SHEET]
+    header = [(c.column_letter, c.value) for c in ws[1]]
+    tcol = next(col for col, v in header if v == "s")
+    cols, started = {}, False
+    for col, v in header[[c for c, _ in header].index(tcol) + 1:]:
+        m = re.fullmatch(r"PIR_\d+_(\d+)", str(v or ""))
+        if m:
+            cols[int(m.group(1))], started = col, True
+        elif started:
+            break
     rows = range(2, ws.max_row + 1)
-    t = np.array([ws[f"B{r}"].value for r in rows], float)
-    logs = {h: np.array([ws[f"{c}{r}"].value for r in rows], float) for h, c in LOG_COLUMNS.items()}
-    keep = t <= END_OF_RECORD_S
-    t, logs = t[keep], {h: T[keep] for h, T in logs.items()}
-
-    # arrival times of 600/700/800 °C for all six heights (K1:P5, temperatures in Q3:Q5)
-    table = {}
-    for col in "KLMNOP":
-        h = int(ws[f"{col}1"].value.rsplit("_", 1)[1])
-        table[h] = {int(ws[f"Q{r}"].value): float(ws[f"{col}{r}"].value) for r in (3, 4, 5)}
-
-    # points behind the Excel exponential chart (times in K/M/O, temperatures in L/N/P, rows 14-18)
-    chart = {}
-    for tc, Tc in (("K", "L"), ("M", "N"), ("O", "P")):
-        h = int(ws[f"{Tc}13"].value.rsplit("_", 1)[1])
-        chart[h] = (np.array([ws[f"{tc}{r}"].value for r in range(14, 19)], float),
-                    np.array([ws[f"{Tc}{r}"].value for r in range(14, 19)], float))
-    return t, logs, table, chart
+    as_float = lambda v: float(v) if isinstance(v, (int, float)) else np.nan  # noqa: E731
+    t = np.array([as_float(ws[f"{tcol}{r}"].value) for r in rows])
+    logs = {h: np.array([as_float(ws[f"{c}{r}"].value) for r in rows]) for h, c in sorted(cols.items())}
+    keep = np.isfinite(t) & (t <= END_OF_RECORD_S)
+    return t[keep], {h: T[keep] for h, T in logs.items()}
 
 
-def excel_fixed_intercepts(path: Path):
-    """{height: A} for exponential trendlines that use Excel's 'Set Intercept' option."""
-    ns = {"c": "http://schemas.openxmlformats.org/drawingml/2006/chart"}
-    out = {}
-    with zipfile.ZipFile(path) as z:
-        for name in z.namelist():
-            if not re.fullmatch(r"xl/charts/chart\d+\.xml", name):
-                continue
-            for ser in ET.fromstring(z.read(name)).iter(f"{{{ns['c']}}}ser"):
-                label, tl = ser.find("c:tx//c:v", ns), ser.find("c:trendline", ns)
-                if label is None or tl is None or tl.find("c:intercept", ns) is None:
-                    continue
-                m = re.search(r"_(\d+)$", label.text or "")
-                if m and tl.find("c:trendlineType", ns).get("val") == "exp":
-                    out[int(m.group(1))] = float(tl.find("c:intercept", ns).get("val"))
-    return out
-
-
-# ----------------------------------------------------------------------------- metrics
+# ----------------------------------------------------------------------------- per-level metrics
 
 def first_arrival(t, T, thr):
     idx = np.flatnonzero(T >= thr)
@@ -113,10 +113,6 @@ def sustained_arrival(t, T, thr, hold=SUSTAIN_S):
     return np.nan
 
 
-def smooth(y, w=11):
-    return np.convolve(np.pad(y, w // 2, mode="edge"), np.ones(w) / w, mode="valid")
-
-
 def phase_metrics(t, T):
     dt = float(np.median(np.diff(t)))
     in_plateau = (t >= PLATEAU_S[0]) & (t <= PLATEAU_S[1])
@@ -125,25 +121,71 @@ def phase_metrics(t, T):
     i_pk = int(np.argmax(T))
     rate = np.gradient(smooth(T), t)
     after_peak = np.arange(T.size) > i_pk
+    burn = np.flatnonzero(after_peak & (T < BURNOUT_C))
+    onset = np.flatnonzero((t > PLATEAU_S[1]) & (env > plateau + ONSET_RISE_C))
     return {
         "T0": float(T[0]),
-        "rate_phase_I": float(rate[t <= 80].max()),
+        "t90_initial": float(t[np.flatnonzero(T >= T[0] + 0.9 * (plateau - T[0]))[0]]),
+        "rate_initial": float(rate[t <= 80].max()),
         "plateau": plateau,
         "plateau_sd": float(T[in_plateau].std()),
         "dT_plateau": plateau - float(T[0]),
-        "onset_III": float(t[np.flatnonzero((t > PLATEAU_S[1]) & (env > plateau + ONSET_RISE_C))[0]]),
+        "onset_III": float(t[onset[0]]) if onset.size else np.nan,
         "T_peak": float(T[i_pk]),
         "t_peak": float(t[i_pk]),
-        "rate_max": float(rate.max()),
-        "t_rate_max": float(t[np.argmax(rate)]),
-        "dur_600": float(np.sum(T >= 600) * dt),
-        "dur_800": float(np.sum(T >= 800) * dt),
-        "burnout": float(t[np.flatnonzero(after_peak & (T < BURNOUT_C))[0]]),
+        "rise_III": float(T[i_pk]) - plateau,
+        **{f"dur_{thr}": float(np.sum(T >= thr) * dt) for thr in (300, 500, 600, 800)},
+        "dose_Cmin": float(trapezoid(T - T[0], t) / 60),
+        "burnout": float(t[burn[0]]) if burn.size else np.nan,
+        "t_dT600_30s": sustained_arrival(t, T, T[0] + 600.0),
     }
 
 
+def late_cooling_event(t, logs):
+    """First time after EVENT_AFTER_S when at least half of the levels cool faster than EVENT_RATE."""
+    rates = {h: np.gradient(smooth(T), t) for h, T in logs.items()}
+    cooling = np.sum([r < EVENT_RATE for r in rates.values()], axis=0)
+    i = int(np.flatnonzero((t > EVENT_AFTER_S) & (cooling >= len(logs) / 2))[0])
+    after = t >= t[i]
+    return {
+        "t_event": float(t[i]),
+        "cooling_levels": [h for h, r in rates.items() if r[i] < EVENT_RATE],
+        "max_heating_after": {h: float(r[after].max()) for h, r in rates.items()},
+        "t_max_heating_after": {h: float(t[after][np.argmax(r[after])]) for h, r in rates.items()},
+        "max_cooling_after": {h: float(r[after].min()) for h, r in rates.items()},
+    }
+
+
+# ----------------------------------------------------------------------------- vertical structure
+
+def isotherm_height(H, M, thr):
+    """Highest level with T >= thr, interpolated linearly toward the next level (NaN if below the lowest)."""
+    z = np.full(M.shape[1], np.nan)
+    for i in range(M.shape[1]):
+        col = M[:, i]
+        idx = np.flatnonzero(col >= thr)
+        if idx.size:
+            k = idx.max()
+            z[i] = H[k] if k == len(H) - 1 else H[k] + (H[k + 1] - H[k]) * (col[k] - thr) / (col[k] - col[k + 1])
+    return z
+
+
+def hottest_level_changes(t, H, M_smooth):
+    """Times at which the hottest level changes (a new level must stay hottest for DWELL_S)."""
+    arg = np.argmax(M_smooth, axis=0)
+    need = int(DWELL_S / float(np.median(np.diff(t))))
+    changes, current = [], arg[0]
+    for i in range(1, arg.size):
+        if arg[i] != current and np.all(arg[i:i + need] == arg[i]):
+            changes.append({"t_s": float(t[i]), "from_mm": int(H[current]), "to_mm": int(H[arg[i]])})
+            current = arg[i]
+    return H[arg], changes
+
+
+# ----------------------------------------------------------------------------- fronts
+
 def segments(arr: dict):
-    """Consecutive-height velocities for one front {height: arrival time}."""
+    """Consecutive-level velocities for one front {height: time}."""
     hs = [h for h in sorted(arr) if np.isfinite(arr[h])]
     out = []
     for h1, h2 in zip(hs, hs[1:]):
@@ -153,7 +195,46 @@ def segments(arr: dict):
     return out
 
 
+def front_fit(arr: dict):
+    """Linear z = z0 + v t and log-log z ∝ t^m over all levels reached."""
+    hs = [h for h in sorted(arr) if np.isfinite(arr[h])]
+    z, ta = np.array(hs, float), np.array([arr[h] for h in hs])
+    lin, lg = stats.linregress(ta, z), stats.linregress(np.log(ta), np.log(z))
+    return {"levels": len(hs), "v_mm_s": float(lin.slope), "z0_mm": float(lin.intercept), "r2_linear": float(lin.rvalue ** 2),
+            "m": float(lg.slope), "r2_loglog": float(lg.rvalue ** 2),
+            "p_if_L~Q^0.4": float(2.5 * lg.slope), "p_if_L~Q'^(2/3)": float(1.5 * lg.slope)}
+
+
 # ----------------------------------------------------------------------------- growth laws
+
+def power_fit(x, y):
+    """Least-squares y = a x^n (x > 0), started from the log-log line."""
+    ok = y > 0
+    n0, lna0 = np.polyfit(np.log(x[ok]), np.log(y[ok]), 1)
+    (a, n), _ = optimize.curve_fit(lambda x, a, n: a * x ** n, x, y, p0=(np.exp(lna0), n0), maxfev=20000)
+    return float(a), float(n), rms(y - a * x ** n)
+
+
+def growth_models(t, T, pm):
+    """Phase III (onset -> peak) growth of the running-max envelope above the plateau."""
+    env = np.maximum.accumulate(T)
+    sel = (t > pm["onset_III"]) & (t <= pm["t_peak"])
+    x, y = t[sel] - pm["onset_III"], env[sel] - pm["plateau"]
+    a, n, rmse_pow = power_fit(x, y)
+    a2 = float(np.sum(y * x ** 2) / np.sum(x ** 4))
+    r1 = float(np.sum(y * x) / np.sum(x ** 2))
+    best = None  # sensitivity: let the time origin float between ignition and the onset
+    for ts in np.arange(0.0, pm["onset_III"], 5.0):
+        try:
+            fit = power_fit(t[sel] - ts, y)
+        except RuntimeError:
+            continue
+        if best is None or fit[2] < best[1][2]:
+            best = (ts, fit)
+    return {"x": x, "y": y, "n": n, "a_pow": a, "rmse_pow": rmse_pow,
+            "a_at2": a2, "rmse_at2": rms(y - a2 * x ** 2), "rate_lin": r1, "rmse_lin": rms(y - r1 * x),
+            "free_origin_ts": float(best[0]), "free_origin_n": best[1][1], "free_origin_rmse": best[1][2]}
+
 
 def arrival_models(t_arr, T_lev, T_amb, A_fixed, k_printed):
     """Models for the time needed to reach each threshold (thresholds fixed, time measured)."""
@@ -175,37 +256,6 @@ def arrival_models(t_arr, T_lev, T_amb, A_fixed, k_printed):
     return m
 
 
-def power_fit(x, y):
-    """Least-squares y = a x^n (x > 0), started from the log-log line."""
-    ok = y > 0
-    n0, lna0 = np.polyfit(np.log(x[ok]), np.log(y[ok]), 1)
-    (a, n), _ = optimize.curve_fit(lambda x, a, n: a * x ** n, x, y, p0=(np.exp(lna0), n0), maxfev=20000)
-    return float(a), float(n), rms(y - a * x ** n)
-
-
-def growth_models(t, T, pm):
-    """Phase III (onset -> peak) growth of the running-max envelope above the plateau."""
-    env = np.maximum.accumulate(T)
-    sel = (t > pm["onset_III"]) & (t <= pm["t_peak"])
-    x, y = t[sel] - pm["onset_III"], env[sel] - pm["plateau"]
-    a, n, rmse_pow = power_fit(x, y)
-    a2 = float(np.sum(y * x ** 2) / np.sum(x ** 4))
-    r1 = float(np.sum(y * x) / np.sum(x ** 2))
-    # sensitivity: let the time origin float between ignition and the onset
-    best = None
-    for ts in np.arange(0.0, pm["onset_III"], 5.0):
-        s2 = (t > pm["onset_III"]) & (t <= pm["t_peak"])
-        try:
-            fit = power_fit(t[s2] - ts, env[s2] - pm["plateau"])
-        except RuntimeError:
-            continue
-        if best is None or fit[2] < best[1][2]:
-            best = (ts, fit)
-    return {"x": x, "y": y, "n": n, "a_pow": a, "rmse_pow": rmse_pow,
-            "a_at2": a2, "rmse_at2": rms(y - a2 * x ** 2), "rate_lin": r1, "rmse_lin": rms(y - r1 * x),
-            "free_origin_ts": float(best[0]), "free_origin_n": best[1][1], "free_origin_rmse": best[1][2]}
-
-
 def unified_model(chart):
     """t = tau0 + s (h - 2000) + b ln(T/400): one heating curve shifted in time with height."""
     rows = [(h, T, tt) for h, (ts, Ts) in chart.items() for tt, T in zip(ts, Ts)]
@@ -219,10 +269,9 @@ def unified_model(chart):
 
     X3 = np.column_stack([np.ones_like(y), h - UNIFIED_H_REF, L])
     beta, sse3 = sse(X3)
-    _, sse4 = sse(np.column_stack([dummies, L]))                 # common slope, free delays
-    _, sse6 = sse(np.column_stack([dummies, dummies * L[:, None]]))  # separate curves per height
-    n = y.size
-    dof = n - 3
+    _, sse4 = sse(np.column_stack([dummies, L]))
+    _, sse6 = sse(np.column_stack([dummies, dummies * L[:, None]]))
+    n, dof = y.size, y.size - 3
     se = np.sqrt(np.diag(sse3 / dof * np.linalg.inv(X3.T @ X3)))
     q = stats.t.ppf(0.975, dof)
     f_slope = ((sse4 - sse6) / 2) / (sse6 / (n - 6))
@@ -232,7 +281,7 @@ def unified_model(chart):
         "tau0_s": float(tau0), "delay_s_per_mm": float(s), "b_s": float(b), "k": float(1 / b),
         "velocity_mm_s": float(1 / s), "velocity_ci95": [float(1 / (s + q * se[1])), float(1 / (s - q * se[1]))],
         "k_ci95": [float(1 / (b + q * se[2])), float(1 / (b - q * se[2]))],
-        "rmse_t": float(np.sqrt(sse3 / n)), "resid_se_t": float(np.sqrt(sse3 / dof)),
+        "rmse_t": float(np.sqrt(sse3 / n)),
         "F_separate_k": float(f_slope), "p_separate_k": float(stats.f.sf(f_slope, 2, n - 6)),
         "F_nonlinear_delay": float(f_linear), "p_nonlinear_delay": float(stats.f.sf(f_linear, 1, n - 4)),
         "A_equiv": {int(hh): float(UNIFIED_T_REF * np.exp(-(tau0 + s * (hh - UNIFIED_H_REF)) / b)) for hh in sorted(chart)},
@@ -265,143 +314,245 @@ def ring(**kw):
     return dict(markeredgecolor=SURFACE, markeredgewidth=1.0, **kw)
 
 
-def fig_histories(t, logs, pm, path):
-    fig, ax = plt.subplots(figsize=(9.6, 5.4))
-    ax.axvspan(0, PHASE_I_END_S, color=BAND1, lw=0, zorder=0)
-    ax.axvspan(PHASE_I_END_S, 350, color=BAND2, lw=0, zorder=0)
-    for thr in (400, 600, 800):
+def event_line(ax, ev, y, text=True):
+    ax.axvline(ev["t_event"], color=INK2, lw=0.9, ls=(0, (4, 3)), zorder=2)
+    if text:
+        ax.text(ev["t_event"] - 12, y, f"≈{ev['t_event']:.0f} s: lower levels cool,\ntop flares up",
+                ha="right", va="top", fontsize=8, color=INK2)
+
+
+def fig_histories(t, logs, pm, ev, colors, path):
+    fig, ax = plt.subplots(figsize=(10.2, 5.6))
+    ax.axvspan(0, 70, color=BAND, lw=0, zorder=0)
+    for x, label in ((35, "I"), (210, "II  plateau"), (780, "III  upward spread"),
+                     (ev["t_event"] + 75, "IV"), (1560, "V  burn-out")):
+        ax.text(x, 1262, label, ha="center", fontsize=8.5, color=INK2)
+    for thr in (600, 800):
         ax.axhline(thr, color=AXIS, lw=0.7, zorder=1)
         ax.text(END_OF_RECORD_S + 8, thr, f"{thr} °C", va="center", fontsize=8, color=MUTED)
-    for x, label in ((PHASE_I_END_S / 2, "I"), ((PHASE_I_END_S + 350) / 2, "II  plateau"),
-                     (780, "III  spread-driven growth"), (1450, "IV–V  peak → burn-out")):
-        ax.text(x, 1255, label, ha="center", fontsize=8.5, color=INK2)
-    for h, T in logs.items():
-        ax.plot(t, T, color=HEIGHT_COLOR[h], lw=1.4, label=f"{h} mm", zorder=3)
+    event_line(ax, ev, 1225)
+    for i, (h, T) in enumerate(logs.items()):
+        ax.plot(t, T, color=colors[h], lw=1.3, label=f"{h} mm", zorder=3)
         m = pm[h]
-        ax.plot(m["t_peak"], m["T_peak"], HEIGHT_MARKER[h], ms=7, color=HEIGHT_COLOR[h], zorder=4, **ring())
-        dx, ha = (-14, "right") if h == 2000 else ((-12, "right") if h == 2500 else (12, "left"))
-        ax.annotate(f"{h} mm peak {m['T_peak']:.0f} °C @ {m['t_peak']:.0f} s", (m["t_peak"], m["T_peak"]),
-                    xytext=(dx, 6), textcoords="offset points", ha=ha, fontsize=8, color=INK)
+        ax.plot(m["t_peak"], m["T_peak"], HEIGHT_MARKERS[i], ms=6.5, color=colors[h], zorder=4, **ring())
+        ax.text(150, m["plateau"] + 18, f"{h} mm", fontsize=8, color=INK, zorder=5,
+                path_effects=[pe.withStroke(linewidth=3, foreground=SURFACE)])
     ax.set(xlim=(0, END_OF_RECORD_S), ylim=(0, 1300), xlabel="Time from ignition (s)", ylabel="Temperature (°C)")
-    ax.set_title("Temperature histories above the fire source (PIR_2, sheet 'sc_2 max')")
-    ax.legend(loc="upper left", bbox_to_anchor=(0.005, 0.9))
+    ax.set_title("Temperature histories, 500–3000 mm above the fire source (markers = peak)")
+    ax.legend(loc="upper right", ncol=2, bbox_to_anchor=(1.0, 0.93))
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)
 
 
-def fig_fronts(arrivals, pm, path):
-    fig, (ax, bx) = plt.subplots(1, 2, figsize=(10.4, 5.2), sharey=True, gridspec_kw={"width_ratios": [1.6, 1]})
-    fronts = [(f"{thr} °C first arrival", arrivals[thr], ISO_COLOR[thr], "o", "-") for thr in (600, 700, 800)]
-    fronts += [("peak temperature", {h: pm[h]["t_peak"] for h in pm}, PEAK_COLOR, "D", "-"),
-               (f"burn-out (< {BURNOUT_C} °C)", {h: pm[h]["burnout"] for h in pm}, BURN_COLOR, "s", "--")]
-    for label, arr, color, mk, ls in fronts:
-        hs = [h for h in sorted(arr) if np.isfinite(arr[h])]
-        ax.plot([arr[h] for h in hs], hs, ls=ls, color=color, lw=1.4, marker=mk, ms=6, label=label, **ring())
+def fig_space_time(t, H, M, iso, pm, ev, path):
+    fig, ax = plt.subplots(figsize=(10.6, 5.4))
+    edges = np.concatenate(([H[0] - (H[1] - H[0]) / 2], (H[:-1] + H[1:]) / 2, [H[-1] + (H[-1] - H[-2]) / 2]))
+    t_edges = np.concatenate(([t[0]], (t[:-1] + t[1:]) / 2, [t[-1]]))
+    mesh = ax.pcolormesh(t_edges, edges, M, cmap="inferno", vmin=0, vmax=1200, shading="flat", rasterized=True)
+    cb = fig.colorbar(mesh, ax=ax, pad=0.015, fraction=0.035)
+    cb.set_label("Temperature (°C)", color=INK2)
+    cb.outline.set_visible(False)
+    halo = [pe.withStroke(linewidth=2.6, foreground="#0b0b0b")]
+    for thr, ls in ((500, ":"), (600, "--"), (800, "-")):
+        ax.plot(t, smooth(iso[thr], 31), color="white", lw=1.3, ls=ls, path_effects=halo, label=f"{thr} °C isotherm")
+    hs = sorted(pm)
+    ax.plot([pm[h]["t_peak"] for h in hs], hs, color="white", lw=1.0, marker="D", ms=6,
+            markerfacecolor=PEAK_COLOR, markeredgecolor="white", path_effects=halo, label="peak temperature")
+    ax.axvline(ev["t_event"], color="white", lw=1.0, ls=(0, (4, 3)))
+    ax.text(ev["t_event"] + 10, 350, f"≈{ev['t_event']:.0f} s", color="white", fontsize=8, path_effects=halo)
+    ax.set(xlim=(0, END_OF_RECORD_S), ylim=(edges[0], edges[-1]), xlabel="Time from ignition (s)",
+           ylabel="Height above fire source (mm)")
+    ax.set_yticks(H)
+    ax.grid(False)
+    ax.set_title("Space–time temperature map (bands = thermocouple levels; isotherms interpolated between levels)")
+    leg = ax.legend(loc="upper left", fontsize=8, labelcolor="white", facecolor="#0b0b0b", framealpha=0.55, frameon=True)
+    leg.get_frame().set_edgecolor("none")
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
+def fig_profiles(t, H, M_s, hot_level, changes, ev, path):
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(10.6, 5.6), gridspec_kw={"width_ratios": [1, 1.35]})
+    for times, ramp, tag in ((PROFILE_TIMES, BLUE_RAMP, ""), (POST_EVENT_TIMES, ORANGE_RAMP, " (after event)")):
+        for tt, c in zip(times, ramp):
+            i = int(np.argmin(np.abs(t - tt)))
+            ax.plot(M_s[:, i], H, color=c, lw=1.5, marker="o", ms=5, label=f"{tt} s{tag}", **ring())
+    ax.set(xlim=(0, 1200), ylim=(250, 3250), xlabel="Temperature (°C, 11-s mean)", ylabel="Height above fire source (mm)")
+    ax.set_yticks(H)
+    ax.set_title("(a) Vertical profiles")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=4, fontsize=7.8)
+    bx.step(t, hot_level, where="post", color=INK, lw=1.3)
+    top = -np.inf
+    for c in changes:
+        if c["to_mm"] <= top:  # label only the first time each level becomes the hottest
+            continue
+        top = c["to_mm"]
+        bx.plot(c["t_s"], c["to_mm"], "o", ms=5, color=PEAK_COLOR, zorder=3, **ring())
+        right = c["t_s"] > ev["t_event"]
+        bx.annotate(f"{c['t_s']:.0f} s", (c["t_s"], c["to_mm"]), xytext=(6 if right else -6, 5), textcoords="offset points",
+                    ha="left" if right else "right", fontsize=7.8, color=INK2)
+    event_line(bx, ev, 3200, text=False)
+    bx.set(xlim=(0, END_OF_RECORD_S), ylim=(250, 3250), xlabel="Time from ignition (s)")
+    bx.set_yticks(H)
+    bx.set_title("(b) Hottest level vs time (31-s mean, ≥30 s dwell)")
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
+def fig_fronts(t, iso, arrivals, fits, pm, ev, path):
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(11.0, 5.4), sharey=True, gridspec_kw={"width_ratios": [1.6, 1]})
+    for thr in ISOTHERMS:
+        ax.plot(t, smooth(iso[thr], 31), color=ISO_COLOR[thr], lw=1.1, alpha=0.9, label=f"{thr} °C isotherm height")
+    for thr in (600, 800):
+        arr = arrivals[thr]
+        hh = [h for h in sorted(arr) if np.isfinite(arr[h])]
+        ax.plot([arr[h] for h in hh], hh, "o", ms=6, color=ISO_COLOR[thr], **ring())
+    f = fits[800]
+    tt = np.array([0.0, END_OF_RECORD_S])
+    ax.plot(tt, f["z0_mm"] + f["v_mm_s"] * tt, color=ISO_COLOR[800], lw=0.9, ls="--")
+    ax.text(30, 3230, f"dashed: 800 °C first-arrival front, linear fit\n≈ {f['v_mm_s']:.2f} mm/s (R² {f['r2_linear']:.3f})",
+            fontsize=8, color=INK, va="top")
+    hs = sorted(pm)
+    ax.plot([pm[h]["t_peak"] for h in hs], hs, color=PEAK_COLOR, lw=1.3, marker="D", ms=6, label="peak temperature", **ring())
+    ax.plot([pm[h]["burnout"] for h in hs], hs, color=BURN_COLOR, lw=1.2, ls="--", marker="s", ms=5,
+            label=f"burn-out (< {BURNOUT_C} °C)", **ring())
+    event_line(ax, ev, 3230, text=False)
+    ax.set(xlim=(0, END_OF_RECORD_S), ylim=(0, 3300), xlabel="Time from ignition (s)", ylabel="Height above fire source (mm)")
+    ax.set_title("(a) Fronts: isotherm heights, first arrivals (dots), peak, burn-out")
+    ax.legend(loc="lower right", fontsize=8)
+    for name, arr, color, mk, ls in [(f"{thr} °C", arrivals[thr], ISO_COLOR[thr], "o", "-") for thr in (600, 800, 900)] + [
+            ("peak", {h: pm[h]["t_peak"] for h in hs}, PEAK_COLOR, "D", "-"),
+            ("burn-out", {h: pm[h]["burnout"] for h in hs}, BURN_COLOR, "s", "--")]:
         seg = [s for s in segments(arr) if np.isfinite(s["v_mm_s"])]
-        bx.plot([s["v_mm_s"] for s in seg], [(s["from_mm"] + s["to_mm"]) / 2 for s in seg],
-                ls=ls, color=color, lw=0.8, alpha=0.9, marker=mk, ms=6, **ring())
-    ax.set(xlim=(0, 1600), ylim=(0, 3250), xlabel="Arrival time (s)", ylabel="Height above fire source (mm)")
-    ax.set_yticks(range(0, 3001, 500))
-    ax.set_title("(a) Front trajectories")
-    ax.legend(loc="lower right")
+        bx.plot([s["v_mm_s"] for s in seg], [(s["from_mm"] + s["to_mm"]) / 2 for s in seg], ls=ls, color=color,
+                lw=0.9, marker=mk, ms=6, label=name, **ring())
     bx.set_xscale("log")
-    bx.set(xlim=(0.8, 200), xlabel="Segment velocity Δz/Δt (mm/s, log scale)")
+    bx.set(xlim=(0.7, 200), xlabel="Velocity between adjacent levels (mm/s, log)")
     bx.set_xticks([1, 2, 5, 10, 20, 50, 100])
     bx.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
     bx.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
-    bx.text(0.98, 0.02, "segment midpoints; 500–1500 mm from the summary table",
-            transform=bx.transAxes, ha="right", fontsize=7.5, color=MUTED)
-    bx.axvspan(1.5, 2.5, color=BAND1, lw=0, zorder=0)
-    bx.text(1.95, 3160, "1.5–2.5 mm/s", ha="center", fontsize=8, color=INK2)
-    bx.set_title("(b) Velocity between adjacent levels")
+    bx.axvspan(1.5, 3.5, color=BAND, lw=0, zorder=0)
+    bx.text(2.3, 3180, "1.5–3.5 mm/s", ha="center", fontsize=8, color=INK2)
+    bx.set_title("(b) Segment velocity (at segment midpoint)")
+    bx.legend(loc="lower right", fontsize=8)
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)
 
 
-def fig_growth(t, logs, pm, gm, path):
-    fig, axes = plt.subplots(1, 3, figsize=(11.4, 4.2), sharey=True)
-    for ax, (h, T) in zip(axes, logs.items()):
+def fig_growth(t, logs, pm, gm, arrivals, fits, colors, path):
+    hs = list(gm)
+    fig, axes = plt.subplots(2, 3, figsize=(11.6, 7.2))
+    for ax, h in zip(axes.flat, hs):
         m, g = pm[h], gm[h]
         sel = (t > m["onset_III"]) & (t <= m["t_peak"])
         x = g["x"]
-        ax.plot(t[sel] - m["onset_III"], T[sel] - m["plateau"], color=HEIGHT_COLOR[h], lw=0.8, alpha=0.35)
-        ax.plot(x, g["y"], color=HEIGHT_COLOR[h], lw=1.5, label="measured (running max)")
+        ax.plot(t[sel] - m["onset_III"], logs[h][sel] - m["plateau"], color=colors[h], lw=0.8, alpha=0.35)
+        ax.plot(x, g["y"], color=colors[h], lw=1.5, label="measured (running max)")
         ax.plot(x, g["a_pow"] * x ** g["n"], color=INK, lw=1.2, label="power law  a·t'ⁿ")
         ax.plot(x, g["a_at2"] * x ** 2, color=INK, lw=1.2, ls="--", label="at'²")
         ax.plot(x, g["rate_lin"] * x, color=MUTED, lw=1.2, ls=":", label="linear")
-        ax.text(0.03, 0.97, f"n = {g['n']:.2f}  (RMSE {g['rmse_pow']:.0f} °C)\n"
-                            f"at'²: RMSE {g['rmse_at2']:.0f} °C\nlinear: RMSE {g['rmse_lin']:.0f} °C",
-                transform=ax.transAxes, va="top", fontsize=8, color=INK)
-        ax.set_title(f"{h} mm  (onset {m['onset_III']:.0f} s → peak {m['t_peak']:.0f} s)")
-        ax.set_xlabel("t' = time since phase-III onset (s)")
-    axes[0].set_ylabel("Rise above plateau (°C)")
-    axes[0].set_ylim(0, 1000)
-    handles, labels = axes[0].get_legend_handles_labels()
+        ax.text(0.03, 0.97, f"n = {g['n']:.2f} (RMSE {g['rmse_pow']:.0f} °C)\nat'²: RMSE {g['rmse_at2']:.0f} °C\n"
+                            f"linear: RMSE {g['rmse_lin']:.0f} °C", transform=ax.transAxes, va="top", fontsize=7.8, color=INK)
+        ax.set_title(f"{h} mm  (onset {m['onset_III']:.0f} s → peak {m['t_peak']:.0f} s)", fontsize=9.5)
+        ax.set_xlabel("t' = time since phase-III onset (s)", fontsize=8.5)
+        ax.set_ylabel("Rise above plateau (°C)", fontsize=8.5)
+        ax.set_ylim(0, max(1000, g["y"].max() * 1.05))
+    for ax in list(axes.flat)[len(hs):-1]:
+        ax.set_visible(False)
+    ax = axes.flat[-1]
+    for thr in (600, 800, 900):
+        arr = arrivals[thr]
+        hh = [k for k in sorted(arr) if np.isfinite(arr[k])]
+        ax.plot([arr[k] for k in hh], hh, "o-", color=ISO_COLOR[thr], lw=1.0, ms=5,
+                label=f"{thr} °C: m = {fits[thr]['m']:.2f}", **ring())
+    tt = np.array([100.0, 1500.0])
+    for m_ref, ls, lab in ((0.8, "--", "m = 0.8 (≙ Q ∝ t² if L ∝ Q^0.4)"), (1.0, ":", "m = 1 (constant speed)")):
+        ax.plot(tt, 1500 * (tt / 600) ** m_ref, color=MUTED, lw=1.0, ls=ls, label=lab)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set(xlim=(20, 2000), ylim=(400, 3500), xlabel="First-arrival time (s, log)", ylabel="Height (mm, log)")
+    ax.set_yticks([500, 1000, 1500, 2000, 3000])
+    ax.set_xticks([30, 100, 300, 1000])
+    for axis in (ax.xaxis, ax.yaxis):
+        axis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+        axis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax.set_title("(f) Front height ∝ tᵐ", fontsize=9.5)
+    ax.legend(loc="upper left", fontsize=7.2)
+    handles, labels = axes.flat[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower center", ncol=4, bbox_to_anchor=(0.5, 0.0))
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
     fig.savefig(path, dpi=200)
     plt.close(fig)
 
 
-def fig_height_trends(pm, gm, decay, path):
+def fig_height_trends(pm, gm, decay, colors, path):
     hs = sorted(pm)
     panels = [
-        ("(a) Plateau rise ΔT (phase II)", "°C", [pm[h]["dT_plateau"] for h in hs]),
-        ("(b) Max heating rate, first 80 s", "°C/s", [pm[h]["rate_phase_I"] for h in hs]),
-        ("(c) Growth exponent n (phase III)", "n", [gm[h]["n"] for h in hs]),
-        ("(d) Peak temperature", "°C", [pm[h]["T_peak"] for h in hs]),
-        ("(e) Time of peak", "s", [pm[h]["t_peak"] for h in hs]),
-        ("(f) Time spent above threshold", "s", None),
+        ("(a) Plateau rise ΔT (100–340 s)", "°C", {h: pm[h]["dT_plateau"] for h in hs}, "{:.0f}"),
+        ("(b) Max heating rate, first 80 s", "°C/s", {h: pm[h]["rate_initial"] for h in hs}, "{:.1f}"),
+        ("(c) Growth exponent n (phase III)", "n", {h: gm[h]["n"] for h in gm}, "{:.2f}"),
+        ("(d) Peak temperature", "°C", {h: pm[h]["T_peak"] for h in hs}, "{:.0f}"),
+        ("(e) Time of peak", "s", {h: pm[h]["t_peak"] for h in hs}, "{:.0f}"),
+        ("(f) Time above threshold", "s", None, None),
+        ("(g) Thermal dose ∫(T−T₀)dt", "°C·min", {h: pm[h]["dose_Cmin"] / 1000 for h in hs}, "{:.1f}k"),
+        ("(h) First ΔT > 600 K for ≥ 30 s", "s", {h: pm[h]["t_dT600_30s"] for h in hs}, "{:.0f}"),
     ]
-    fig, axes = plt.subplots(2, 3, figsize=(11.2, 6.4))
-    for ax, (title, unit, vals) in zip(axes.flat, panels):
+    fig, axes = plt.subplots(2, 4, figsize=(14.2, 6.8))
+    for ax, (title, unit, vals, fmt) in zip(axes.flat, panels):
         if vals is None:
-            for thr, key in ((600, "dur_600"), (800, "dur_800")):
-                v = [pm[h][key] for h in hs]
-                ax.plot(hs, v, color=ISO_COLOR[thr], lw=1.2, marker="o", ms=6, label=f"≥ {thr} °C", **ring())
-                ax.annotate(f"≥ {thr} °C", (hs[-1], v[-1]), xytext=(6, 0), textcoords="offset points",
-                            va="center", fontsize=8, color=INK2)
+            for thr, c in ((600, BLUE_RAMP[2]), (800, BLUE_RAMP[4])):
+                v = [pm[h][f"dur_{thr}"] for h in hs]
+                ax.plot(hs, v, color=c, lw=1.2, marker="o", ms=5.5, **ring())
+                ax.annotate(f"≥ {thr} °C", (hs[-1], v[-1]), xytext=(4, 8), textcoords="offset points",
+                            fontsize=8, color=INK2)
         else:
-            ax.plot(hs, vals, color=AXIS, lw=1.0, zorder=2)
-            for h, v in zip(hs, vals):
-                ax.plot(h, v, HEIGHT_MARKER[h], ms=7, color=HEIGHT_COLOR[h], zorder=3, **ring())
-                ax.annotate(f"{v:.2f}" if unit in ("n", "°C/s") else f"{v:.0f}", (h, v), xytext=(0, 8),
-                            textcoords="offset points", ha="center", fontsize=8, color=INK)
-        ax.set_title(title, fontsize=9.5)
-        ax.set_ylabel(unit)
+            k = list(vals)
+            ax.plot(k, [vals[h] for h in k], color=AXIS, lw=1.0, zorder=2)
+            for h in k:
+                ax.plot(h, vals[h], HEIGHT_MARKERS[hs.index(h)], ms=7, color=colors[h], zorder=3, **ring())
+                ax.annotate(fmt.format(vals[h]), (h, vals[h]), xytext=(0, 7), textcoords="offset points",
+                            ha="center", fontsize=7.6, color=INK)
+        ax.set_title(title, fontsize=9.2)
+        ax.set_ylabel(unit, fontsize=8.5)
         ax.set_xticks(hs)
-        ax.set_xlim(1800, 3250)
-        ax.margins(y=0.25)
-    ax = axes[0, 0]
-    zz = np.linspace(1900, 3100, 50)
-    ax.plot(zz, decay["dT0"] * np.exp(-(zz - 2000) / decay["lambda_mm"]), color=MUTED, lw=1.0, ls="--", zorder=1)
-    ax.text(0.97, 0.9, f"ΔT ∝ exp(−z/λ), λ ≈ {decay['lambda_mm']:.0f} mm", transform=ax.transAxes,
-            ha="right", fontsize=8, color=INK2)
-    ax = axes[0, 2]
+        ax.tick_params(axis="x", labelsize=7.5)
+        ax.set_xlim(hs[0] - 250, hs[-1] + 350)
+        ax.margins(y=0.2)
+    ax = axes.flat[0]
+    zz = np.linspace(decay["z_from"] - 100, hs[-1] + 100, 50)
+    ax.plot(zz, np.exp(decay["ln_a"] + decay["slope"] * zz), color=MUTED, lw=1.0, ls="--", zorder=1)
+    ax.text(0.97, 0.92, f"z ≥ {decay['z_from']:.0f} mm: λ ≈ {decay['lambda_mm']:.0f} mm", transform=ax.transAxes,
+            ha="right", fontsize=7.8, color=INK2)
+    ax = axes.flat[2]
     for ref, lab in ((1, "linear"), (2, "t²")):
         ax.axhline(ref, color=AXIS, lw=0.8, zorder=1)
-        ax.text(1820, ref, lab, va="bottom", fontsize=8, color=MUTED)
+        ax.text(hs[0] - 230, ref, lab, va="bottom", fontsize=7.6, color=MUTED)
     ax.set_ylim(0, 2.3)
+    ax = axes.flat[7]
+    ax.axhline(900, color=AXIS, lw=0.8)
+    ax.text(hs[0] - 230, 900, "15 min", va="bottom", fontsize=7.6, color=MUTED)
     for ax in axes[1]:
-        ax.set_xlabel("Height above fire source (mm)")
+        ax.set_xlabel("Height above fire source (mm)", fontsize=8.5)
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)
 
 
-def fig_excel_check(chart, models, uni, path):
+def fig_excel_check(chart, models, uni, colors, path):
     fig, ax = plt.subplots(figsize=(9.6, 5.2))
     for h, (ts, Ts) in chart.items():
-        c = HEIGHT_COLOR[h]
+        c = colors[h]
         tt = np.linspace(ts.min(), ts.max(), 200)
         ex, pr = models[h]["excel_trendline"], models[h]["excel_printed"]
         ax.plot(tt, ex["A"] * np.exp(ex["k"] * tt), color=c, lw=1.5, zorder=2)
         ax.plot(tt, pr["A"] * np.exp(pr["k"] * tt), color=c, lw=1.2, ls=":", zorder=2)
         TT = np.linspace(400, 800, 100)
         ax.plot(unified_time(uni, h, TT), TT, color=INK2, lw=1.0, ls="--", zorder=2)
-        ax.plot(ts, Ts, HEIGHT_MARKER[h], ms=7, color=c, zorder=3, **ring())
+        ax.plot(ts, Ts, "o", ms=6.5, color=c, zorder=3, **ring())
         ax.annotate(f"{h} mm\nExcel: {ex['A']:.0f}·e^({ex['k']:.6f} t)\nprinted: {pr['A']:.0f}·e^({pr['k']} t)",
                     (ts[0], Ts[0]), xytext=(0, -46), textcoords="offset points", ha="left", fontsize=7.8, color=INK)
     handles = [plt.Line2D([], [], color=INK2, lw=1.5, label="Excel trendline as drawn (intercept fixed, exact k)"),
@@ -409,7 +560,7 @@ def fig_excel_check(chart, models, uni, path):
                plt.Line2D([], [], color=INK2, lw=1.0, ls="--", label="unified model: one curve shifted by height")]
     ax.legend(handles=handles, loc="upper left")
     ax.set(xlim=(0, 1300), ylim=(250, 900), xlabel="Arrival time (s)", ylabel="Threshold temperature (°C)")
-    ax.set_title("Exponential trendlines on the 400–800 °C arrival data")
+    ax.set_title("Appendix – exponential trendlines on the 400–800 °C arrival times (2000–3000 mm)")
     fig.tight_layout()
     fig.savefig(path, dpi=200)
     plt.close(fig)
@@ -417,173 +568,177 @@ def fig_excel_check(chart, models, uni, path):
 
 # ----------------------------------------------------------------------------- main
 
+def clean(o):
+    """Strict JSON: numpy scalars -> float/int, NaN -> null."""
+    if isinstance(o, dict):
+        return {k: clean(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple, np.ndarray)):
+        return [clean(v) for v in o]
+    if isinstance(o, (float, np.floating)):
+        return float(o) if np.isfinite(o) else None
+    if isinstance(o, np.integer):
+        return int(o)
+    return o
+
+
 def write_csv(path, rows):
     rows = list(rows)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         for r in rows:
-            w.writerow({k: ((round(v, 6) if np.isfinite(v) else "") if isinstance(v, float) else v)
-                        for k, v in r.items()})
+            w.writerow({k: ((round(v, 6) if np.isfinite(v) else "") if isinstance(v, float) else v) for k, v in r.items()})
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--xlsx", type=Path, default=HERE / "data" / "test.xlsx")
+    ap.add_argument("--xlsx", type=Path, default=HERE / "data" / "PIR_2_max.xlsx")
     args = ap.parse_args()
-    (HERE / "figures").mkdir(exist_ok=True)
-    (HERE / "results").mkdir(exist_ok=True)
+    for d in ("figures", "results"):
+        (HERE / d).mkdir(exist_ok=True)
 
-    t, logs, table, chart = read_workbook(args.xlsx)
-    intercepts = excel_fixed_intercepts(args.xlsx)
-    heights = sorted(logs)
-    all_heights = sorted(table)
+    t, logs = read_logs(args.xlsx)
+    hs = sorted(logs)
+    H = np.array(hs, float)
+    M = np.array([logs[h] for h in hs])
+    M11 = np.array([smooth(logs[h]) for h in hs])
+    M31 = np.array([smooth(logs[h], 31) for h in hs])
+    colors = {h: HEIGHT_COLORS[i] for i, h in enumerate(hs)}
 
-    # ---- phases, arrivals, velocities
-    pm = {h: phase_metrics(t, logs[h]) for h in heights}
-    arrivals, sustained, arrival_rows = {}, {}, []
-    for thr in THRESHOLDS:
-        arrivals[thr], sustained[thr] = {}, {}
-        for h in all_heights:
-            if h in logs:
-                arrivals[thr][h] = first_arrival(t, logs[h], thr)
-                sustained[thr][h] = sustained_arrival(t, logs[h], thr)
-                src = "1 Hz log"
-            elif thr in table[h]:
-                arrivals[thr][h], sustained[thr][h], src = table[h][thr], np.nan, "summary table"
-            else:
-                continue
-            arrival_rows.append({"threshold_C": thr, "height_mm": h, "first_arrival_s": arrivals[thr][h],
-                                 f"sustained_{SUSTAIN_S}s_arrival_s": sustained[thr][h], "source": src})
-    table_check = {h: {thr: table[h][thr] - arrivals[thr][h] for thr in table[h]} for h in heights}
-    # sensitivity of the arrival times to an 11-s moving average (thresholds >= 400 °C)
-    smoothing_shift = max(abs(first_arrival(t, smooth(logs[h]), thr) - arrivals[thr][h])
-                          for h in heights for thr in THRESHOLDS
-                          if np.isfinite(arrivals[thr][h]) and np.isfinite(first_arrival(t, smooth(logs[h]), thr)))
-    sustained_shift = max(abs(sustained[thr][h] - arrivals[thr][h]) for h in heights for thr in THRESHOLDS
-                          if np.isfinite(sustained[thr][h]) and np.isfinite(arrivals[thr][h]))
+    # ---- stages and events
+    pm = {h: phase_metrics(t, logs[h]) for h in hs}
+    ev = late_cooling_event(t, logs)
 
-    velocity_rows = []
+    # ---- vertical structure
+    zp = np.array([pm[h]["dT_plateau"] for h in hs])
+    z_from = 1000.0 if np.sum(H >= 1000) >= 3 else H[0]
+    sel = H >= z_from
+    r = stats.linregress(H[sel], np.log(zp[sel]))
+    decay = {"z_from": z_from, "lambda_mm": float(-1 / r.slope), "r2": float(r.rvalue ** 2), "slope": float(r.slope),
+             "ln_a": float(r.intercept), "loss_per_500mm": float(1 - np.exp(500 * r.slope)),
+             "power_exponent": float(stats.linregress(np.log(H[sel]), np.log(zp[sel])).slope)}
+    iso = {thr: isotherm_height(H, M, thr) for thr in ISOTHERMS}
+    in_plateau = (t >= PLATEAU_S[0]) & (t <= PLATEAU_S[1])
+    plateau_iso = {thr: float(np.nanmean(iso[thr][in_plateau])) for thr in ISOTHERMS}
+    iso_at = {int(tt): {thr: float(smooth(iso[thr], 31)[int(np.argmin(np.abs(t - tt)))]) for thr in ISOTHERMS}
+              for tt in (60, 300, 450, 600, 750, 900, 1050, 1200)}
+    hot_level, hot_changes = hottest_level_changes(t, H, M31)
+    profiles = {int(tt): {h: float(M11[k, int(np.argmin(np.abs(t - tt)))]) for k, h in enumerate(hs)}
+                for tt in PROFILE_TIMES + POST_EVENT_TIMES}
+
+    # ---- fronts
+    arrivals = {thr: {h: first_arrival(t, logs[h], thr) for h in hs} for thr in THRESHOLDS}
+    sustained = {thr: {h: sustained_arrival(t, logs[h], thr) for h in hs} for thr in THRESHOLDS}
     fronts = {f"{thr} C": arrivals[thr] for thr in THRESHOLDS}
-    fronts.update({f"{thr} C sustained {SUSTAIN_S}s": {h: sustained[thr][h] for h in heights} for thr in (500, 600, 700, 800)})
-    fronts["peak"] = {h: pm[h]["t_peak"] for h in heights}
-    fronts[f"burn-out <{BURNOUT_C} C"] = {h: pm[h]["burnout"] for h in heights}
-    for name, arr in fronts.items():
-        for s in segments(arr):
-            velocity_rows.append({"front": name, **s})
-    span = lambda arr, lo, hi: (hi - lo) / (arr[hi] - arr[lo])  # noqa: E731
-    mean_v = {f"{thr} C": {"500-1500": span(arrivals[thr], 500, 1500), "1500-3000": span(arrivals[thr], 1500, 3000),
-                           "500-3000": span(arrivals[thr], 500, 3000)} for thr in (600, 700, 800)}
-
-    # ---- plateau decay with height
-    H = np.array(heights, float)
-    dTp = np.array([pm[h]["dT_plateau"] for h in heights])
-    r = stats.linregress(H, np.log(dTp))
-    rp = stats.linregress(np.log(H), np.log(dTp))
-    decay = {"lambda_mm": float(-1 / r.slope), "dT0": float(np.exp(r.intercept + r.slope * 2000)),
-             "r2": float(r.rvalue ** 2), "loss_per_500mm": float(1 - np.exp(500 * r.slope)), "power_exponent": float(rp.slope)}
+    fronts.update({f"{thr} C sustained {SUSTAIN_S}s": sustained[thr] for thr in (500, 600, 700, 800)})
+    fronts["peak"] = {h: pm[h]["t_peak"] for h in hs}
+    hot_first = {hs[0]: 0.0}
+    for c in hot_changes:
+        if c["to_mm"] > max(hot_first):
+            hot_first[c["to_mm"]] = c["t_s"]
+    fronts["hottest level (first reach)"] = hot_first
+    fronts[f"burn-out <{BURNOUT_C} C"] = {h: pm[h]["burnout"] for h in hs}
+    fits = {thr: front_fit(arrivals[thr]) for thr in THRESHOLDS if np.sum(np.isfinite(list(arrivals[thr].values()))) >= 4}
+    span = {}
+    for thr in (600, 700, 800, 900):
+        a = arrivals[thr]
+        span[f"{thr} C"] = {f"{lo}-{hi}": (hi - lo) / (a[hi] - a[lo]) for lo, hi in ((500, 1500), (1500, 3000), (500, 3000), (1000, 3000))
+                            if lo in a and hi in a and np.isfinite(a[lo]) and np.isfinite(a[hi])}
 
     # ---- growth laws
-    am = {h: arrival_models(chart[h][0], chart[h][1], pm[h]["T0"], intercepts.get(h, np.nan), PRINTED_K[h]) for h in heights}
-    gm = {h: growth_models(t, logs[h], pm[h]) for h in heights}
+    gm = {h: growth_models(t, logs[h], pm[h]) for h in hs if pm[h]["rise_III"] >= MIN_GROWTH_RISE_C}
+
+    # ---- appendix: the earlier Excel exponential chart (2000–3000 mm, 400–800 °C)
+    chart = {h: (np.array([first_arrival(t, logs[h], T) for T in EXCEL_LEVELS]), EXCEL_LEVELS) for h in EXCEL_A if h in logs}
+    am = {h: arrival_models(chart[h][0], chart[h][1], pm[h]["T0"], EXCEL_A[h], EXCEL_PRINTED_K[h]) for h in chart}
     uni = unified_model(chart)
-    for h in heights:
+    for h in chart:
         ts, Ts = chart[h]
-        am[h]["unified"] = {"t_hat": unified_time(uni, h, Ts)}
-        am[h]["unified"]["rmse_t"] = rms(ts - am[h]["unified"]["t_hat"])
-        am[h]["unified"]["max_abs_t"] = float(np.max(np.abs(ts - am[h]["unified"]["t_hat"])))
         tt = np.linspace(ts.min(), ts.max(), 400)
         ex, pr = am[h]["excel_trendline"], am[h]["excel_printed"]
+        am[h]["unified_rmse_t"] = rms(ts - unified_time(uni, h, Ts))
         am[h]["printed_vs_drawn_max_C"] = float(np.max(np.abs(pr["A"] * np.exp(pr["k"] * tt) - ex["A"] * np.exp(ex["k"] * tt))))
-    common_A = 250.0
-    k_common_A = {h: float(np.sum(chart[h][0] * np.log(chart[h][1] / common_A)) / np.sum(chart[h][0] ** 2)) for h in heights}
+    k_common_A = {h: float(np.sum(chart[h][0] * np.log(chart[h][1] / 250.0)) / np.sum(chart[h][0] ** 2)) for h in chart}
 
-    # ---- outputs
-    write_csv(HERE / "results" / "arrival_times.csv", arrival_rows)
-    write_csv(HERE / "results" / "spread_velocity.csv", velocity_rows)
-    write_csv(HERE / "results" / "phase_metrics.csv", ({"height_mm": h, **pm[h]} for h in heights))
+    # ---- tables
+    write_csv(HERE / "results" / "phase_metrics.csv", ({"height_mm": h, **pm[h]} for h in hs))
+    write_csv(HERE / "results" / "arrival_times.csv",
+              ({"threshold_C": thr, "height_mm": h, "first_arrival_s": arrivals[thr][h],
+                f"sustained_{SUSTAIN_S}s_arrival_s": sustained[thr][h]} for thr in THRESHOLDS for h in hs))
+    write_csv(HERE / "results" / "spread_velocity.csv",
+              ({"front": name, **s} for name, arr in fronts.items() for s in segments(arr)))
+    write_csv(HERE / "results" / "front_fits.csv", ({"threshold_C": thr, **f} for thr, f in fits.items()))
     growth_rows = []
-    for h in heights:
-        for name, v in am[h].items():
-            if isinstance(v, dict):
-                growth_rows.append({"height_mm": h, "data": "400-800 C arrival times", "model": name,
-                                    "params": "; ".join(f"{k}={v[k]:.6g}" for k in ("A", "k", "a", "t0", "rate") if k in v),
-                                    "rmse": v["rmse_t"], "rmse_unit": "s"})
-        g = gm[h]
+    for h, g in gm.items():
         for name, par, err in (("power law", f"a={g['a_pow']:.6g}; n={g['n']:.4f}", g["rmse_pow"]),
                                ("at2", f"a={g['a_at2']:.6g}", g["rmse_at2"]),
                                ("linear", f"rate={g['rate_lin']:.6g}", g["rmse_lin"]),
                                ("power law, free origin", f"ts={g['free_origin_ts']:.0f}; n={g['free_origin_n']:.4f}", g["free_origin_rmse"])):
-            growth_rows.append({"height_mm": h, "data": "phase III envelope", "model": name, "params": par,
-                                "rmse": err, "rmse_unit": "C"})
+            growth_rows.append({"height_mm": h, "model": name, "params": par, "rmse_C": err})
     write_csv(HERE / "results" / "growth_fits.csv", growth_rows)
+    write_csv(HERE / "results" / "vertical_profiles.csv",
+              ({"time_s": tt, **{f"T_{h}mm": v for h, v in prof.items()}} for tt, prof in profiles.items()))
+    step = (t % 10 == 0)
+    write_csv(HERE / "results" / "isotherm_heights.csv",
+              ({"time_s": float(tt), **{f"z_{thr}C_mm": float(iso[thr][i]) for thr in ISOTHERMS}, "hottest_level_mm": float(hot_level[i])}
+               for i, tt in zip(np.flatnonzero(step), t[step])))
 
     summary = {
-        "phase_metrics": {h: pm[h] for h in heights},
-        "arrival_first_s": {thr: arrivals[thr] for thr in THRESHOLDS},
-        "arrival_sustained_s": {thr: sustained[thr] for thr in THRESHOLDS},
-        "table_minus_log_s": table_check,
-        "max_shift_smoothing_11s_s": float(smoothing_shift),
-        "max_shift_sustained_30s_s": float(sustained_shift),
-        "mean_velocity_mm_s": mean_v,
-        "plateau_decay": decay,
-        "excel_intercepts": intercepts,
-        "arrival_models": {h: {k: ({kk: vv for kk, vv in v.items() if kk != "t_hat"} if isinstance(v, dict) else v)
-                               for k, v in am[h].items()} for h in heights},
-        "k_with_common_A_250": k_common_A,
-        "phase_III_growth": {h: {k: v for k, v in gm[h].items() if k not in ("x", "y")} for h in heights},
-        "unified_model": uni,
+        "levels_mm": hs, "record_s": [float(t[0]), float(t[-1])],
+        "phase_metrics": pm, "late_cooling_event": ev,
+        "plateau_decay": decay, "plateau_isotherm_height_mm": plateau_iso, "isotherm_height_mm_at": iso_at,
+        "hottest_level_changes": hot_changes, "hottest_level_first_reach_s": hot_first, "profiles_C": profiles,
+        "arrival_first_s": arrivals, "arrival_sustained_s": sustained,
+        "front_fits": fits, "span_velocity_mm_s": span,
+        "phase_III_growth": {h: {k: v for k, v in g.items() if k not in ("x", "y")} for h, g in gm.items()},
+        "excel_appendix": {"arrival_points_s": {h: chart[h][0] for h in chart},
+                           "models": {h: {k: ({kk: vv for kk, vv in v.items() if kk != "t_hat"} if isinstance(v, dict) else v)
+                                          for k, v in am[h].items()} for h in am},
+                           "k_with_common_A_250": k_common_A, "unified_model": uni},
     }
-    def clean(o):  # strict JSON: numpy scalars -> float, NaN -> null
-        if isinstance(o, dict):
-            return {k: clean(v) for k, v in o.items()}
-        if isinstance(o, (list, tuple)):
-            return [clean(v) for v in o]
-        if isinstance(o, (float, np.floating)):
-            return float(o) if np.isfinite(o) else None
-        return o
-
     (HERE / "results" / "summary.json").write_text(
         json.dumps(clean(summary), indent=2, ensure_ascii=False, allow_nan=False), encoding="utf-8")
 
+    # ---- figures
     style()
-    fig_histories(t, logs, pm, HERE / "figures" / "fig1_temperature_histories.png")
-    fig_fronts(arrivals, pm, HERE / "figures" / "fig2_fire_front_velocity.png")
-    fig_growth(t, logs, pm, gm, HERE / "figures" / "fig3_growth_models.png")
-    fig_height_trends(pm, gm, decay, HERE / "figures" / "fig4_height_trends.png")
-    fig_excel_check(chart, am, uni, HERE / "figures" / "fig5_excel_trendline_check.png")
+    fig_histories(t, logs, pm, ev, colors, HERE / "figures" / "fig1_temperature_histories.png")
+    fig_space_time(t, H, M, iso, pm, ev, HERE / "figures" / "fig2_space_time_map.png")
+    fig_profiles(t, H, M11, hot_level, hot_changes, ev, HERE / "figures" / "fig3_vertical_profiles.png")
+    fig_fronts(t, iso, arrivals, fits, pm, ev, HERE / "figures" / "fig4_fire_front_velocity.png")
+    fig_growth(t, logs, pm, gm, arrivals, fits, colors, HERE / "figures" / "fig5_growth_at2.png")
+    fig_height_trends(pm, gm, decay, colors, HERE / "figures" / "fig6_height_trends.png")
+    fig_excel_check(chart, am, uni, colors, HERE / "figures" / "figA1_excel_trendline_check.png")
 
     # ---- console summary
-    print("phase metrics")
-    for h in heights:
+    print(f"levels {hs}, record {t[0]:.0f}-{t[-1]:.0f} s")
+    for h in hs:
         m = pm[h]
-        print(f"  {h} mm: plateau {m['plateau']:.0f}±{m['plateau_sd']:.0f} °C, phase-I max rate {m['rate_phase_I']:.2f} °C/s, "
-              f"onset III {m['onset_III']:.0f} s, peak {m['T_peak']:.0f} °C @ {m['t_peak']:.0f} s, "
-              f"≥600 °C {m['dur_600']:.0f} s, ≥800 °C {m['dur_800']:.0f} s, burn-out <{BURNOUT_C} °C @ {m['burnout']:.0f} s")
-    print(f"plateau decay: λ = {decay['lambda_mm']:.0f} mm (R² {decay['r2']:.4f}), "
-          f"-{100 * decay['loss_per_500mm']:.0f}% per 500 mm, power exponent {decay['power_exponent']:.2f}")
-    print("arrival times (first / sustained 30 s), s")
+        print(f"  {h:4d} mm: T0 {m['T0']:.1f}, t90 {m['t90_initial']:.0f} s, rate {m['rate_initial']:.1f} °C/s, plateau {m['plateau']:.0f}±{m['plateau_sd']:.0f}, "
+              f"onset {m['onset_III']:.0f}, peak {m['T_peak']:.0f}@{m['t_peak']:.0f}, rise {m['rise_III']:.0f}, "
+              f"dur300/500/600/800 {m['dur_300']:.0f}/{m['dur_500']:.0f}/{m['dur_600']:.0f}/{m['dur_800']:.0f}, "
+              f"dose {m['dose_Cmin']:.0f} °C·min, burn-out {m['burnout']:.0f}, ΔT600K30s {m['t_dT600_30s']:.0f}")
+    print("late cooling event:", ev)
+    print("plateau decay:", decay)
+    print("plateau isotherm heights:", plateau_iso, "| isotherm heights at:", iso_at)
+    print("hottest level changes:", hot_changes)
+    print("profiles:", {tt: {h: round(v) for h, v in p.items()} for tt, p in profiles.items()})
     for thr in THRESHOLDS:
-        print(f"  {thr:5d} °C: " + "  ".join(f"{h}:{arrivals[thr][h]:6.0f}/{sustained[thr].get(h, np.nan):5.0f}" for h in arrivals[thr]))
-    print("segment velocities (mm/s)")
+        print(f"  {thr:5d} °C first: " + " ".join(f"{h}:{arrivals[thr][h]:.0f}" for h in hs)
+              + " | sustained: " + " ".join(f"{h}:{sustained[thr][h]:.0f}" for h in hs))
     for name, arr in fronts.items():
-        print(f"  {name:22s} " + "  ".join(f"{s['from_mm']}-{s['to_mm']}:{s['v_mm_s']:6.2f}" for s in segments(arr)))
-    print("span-averaged velocities (mm/s):", {k: {kk: round(vv, 2) for kk, vv in v.items()} for k, v in mean_v.items()})
-    print("arrival-data models (RMSE in s)")
-    for h in heights:
-        print(f"  {h} mm: " + "  ".join(f"{k}={v['rmse_t']:.1f}" for k, v in am[h].items() if isinstance(v, dict)),
-              f"| Excel k={am[h]['excel_trendline']['k']:.6f} (printed {PRINTED_K[h]}), max gap {am[h]['printed_vs_drawn_max_C']:.1f} °C"
-              f" | exp k={am[h]['exponential']['k']:.6f} A={am[h]['exponential']['A']:.0f}"
-              f" | at² a={am[h]['at2']['a']:.3e} t0={am[h]['at2']['t0']:.0f} s")
-    print("k with a common intercept A=250:", {h: round(v, 6) for h, v in k_common_A.items()})
-    print("phase-III growth (envelope above plateau)")
-    for h in heights:
-        g = gm[h]
-        print(f"  {h} mm: n={g['n']:.2f} (RMSE {g['rmse_pow']:.1f}), at² a={g['a_at2']:.3e} (RMSE {g['rmse_at2']:.1f}), "
-              f"linear {g['rate_lin']:.3f} °C/s (RMSE {g['rmse_lin']:.1f}); free origin ts={g['free_origin_ts']:.0f} s → n={g['free_origin_n']:.2f}")
-    print("unified model:", {k: (round(v, 6) if isinstance(v, float) else v) for k, v in uni.items()})
-    print("summary-table minus log arrival (s):", table_check)
-    print(f"max arrival shift, >=400 °C: 11-s moving average {smoothing_shift:.0f} s, sustained {SUSTAIN_S} s {sustained_shift:.0f} s")
+        print(f"  {name:24s} " + "  ".join(f"{s['from_mm']}-{s['to_mm']}:{s['v_mm_s']:.2f}" for s in segments(arr)))
+    print("front fits:", {thr: {k: round(v, 3) for k, v in f.items()} for thr, f in fits.items()})
+    print("span velocities:", {k: {kk: round(vv, 2) for kk, vv in v.items()} for k, v in span.items()})
+    for h, g in gm.items():
+        print(f"  growth {h} mm: n={g['n']:.2f} (RMSE {g['rmse_pow']:.1f}), at² a={g['a_at2']:.3e} (RMSE {g['rmse_at2']:.1f}), "
+              f"linear {g['rate_lin']:.3f} (RMSE {g['rmse_lin']:.1f}); free origin ts={g['free_origin_ts']:.0f} → n={g['free_origin_n']:.2f}")
+    print("appendix arrival points:", {h: chart[h][0].tolist() for h in chart})
+    for h in am:
+        print(f"  {h}: " + " ".join(f"{k}={v['rmse_t']:.1f}" for k, v in am[h].items() if isinstance(v, dict))
+              + f" | unified {am[h]['unified_rmse_t']:.1f} | k={am[h]['excel_trendline']['k']:.6f} | gap {am[h]['printed_vs_drawn_max_C']:.1f} °C"
+              + f" | at² t0={am[h]['at2']['t0']:.0f}")
+    print("k with A=250:", k_common_A)
+    print("unified:", uni)
 
 
 if __name__ == "__main__":

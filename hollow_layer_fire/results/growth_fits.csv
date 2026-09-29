@@ -1,31 +1,21 @@
-height_mm,data,model,params,rmse,rmse_unit
-2000,400-800 C arrival times,excel_trendline,A=350; k=0.00120112,41.98268,s
-2000,400-800 C arrival times,excel_printed,A=350; k=0.0012,42.024312,s
-2000,400-800 C arrival times,exponential,A=359.359; k=0.00115983,40.638146,s
-2000,400-800 C arrival times,at2,a=0.000202102; t0=-1259,45.136272,s
-2000,400-800 C arrival times,linear,rate=0.677507,51.662753,s
-2000,400-800 C arrival times,unified,,48.808959,s
-2000,phase III envelope,power law,a=13.0677; n=0.5569,21.375856,C
-2000,phase III envelope,at2,a=0.00160362,132.022251,C
-2000,phase III envelope,linear,rate=0.868795,59.394218,C
-2000,phase III envelope,"power law, free origin",ts=300; n=0.6945,19.431119,C
-2500,400-800 C arrival times,excel_trendline,A=250; k=0.00126761,46.915929,s
-2500,400-800 C arrival times,excel_printed,A=250; k=0.0013,48.900968,s
-2500,400-800 C arrival times,exponential,A=217.085; k=0.00146942,38.441936,s
-2500,400-800 C arrival times,at2,a=0.000323315; t0=-652.699,40.198779,s
-2500,400-800 C arrival times,linear,rate=0.854701,43.34974,s
-2500,400-800 C arrival times,unified,,42.745413,s
-2500,phase III envelope,power law,a=3.85956; n=0.7680,41.659055,C
-2500,phase III envelope,at2,a=0.00123002,145.994688,C
-2500,phase III envelope,linear,rate=0.870383,54.681827,C
-2500,phase III envelope,"power law, free origin",ts=250; n=1.0019,37.699392,C
-3000,400-800 C arrival times,excel_trendline,A=150; k=0.00142916,54.319346,s
-3000,400-800 C arrival times,excel_printed,A=150; k=0.0014,58.971048,s
-3000,400-800 C arrival times,exponential,A=155.202; k=0.00139883,54.060184,s
-3000,400-800 C arrival times,at2,a=0.000287289; t0=-458.374,49.166403,s
-3000,400-800 C arrival times,linear,rate=0.796813,45.563801,s
-3000,400-800 C arrival times,unified,,54.928721,s
-3000,phase III envelope,power law,a=0.22516; n=1.1888,76.506063,C
-3000,phase III envelope,at2,a=0.00106745,104.530081,C
-3000,phase III envelope,linear,rate=0.767754,79.566189,C
-3000,phase III envelope,"power law, free origin",ts=0; n=2.1019,68.575666,C
+height_mm,model,params,rmse_C
+1000,power law,a=54.5307; n=0.1784,8.874396
+1000,at2,a=0.00170877,75.103614
+1000,linear,rate=0.567948,50.043225
+1000,"power law, free origin",ts=0; n=0.7177,7.991815
+1500,power law,a=6.68536; n=0.6361,20.620548
+1500,at2,a=0.00193032,84.297118
+1500,linear,rate=0.793307,36.247667
+1500,"power law, free origin",ts=180; n=1.1639,15.687243
+2000,power law,a=13.0677; n=0.5569,21.375856
+2000,at2,a=0.00160362,132.022251
+2000,linear,rate=0.868795,59.394218
+2000,"power law, free origin",ts=300; n=0.6945,19.431119
+2500,power law,a=3.85956; n=0.7680,41.659055
+2500,at2,a=0.00123002,145.994688
+2500,linear,rate=0.870383,54.681827
+2500,"power law, free origin",ts=250; n=1.0019,37.699392
+3000,power law,a=0.22516; n=1.1888,76.506063
+3000,at2,a=0.00106745,104.530081
+3000,linear,rate=0.767754,79.566189
+3000,"power law, free origin",ts=0; n=2.1019,68.575666
