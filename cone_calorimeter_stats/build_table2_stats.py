@@ -76,8 +76,16 @@ METRICS = [
      "COmean (g s⁻¹)", 5),
     ("CO2mean", SHEET_GAS, "CO₂mean (g s⁻¹) — 시험별 CO₂ 생성속도의 0–600 s 평균", "CO2", "mean",
      "0.000000", 5, "CO₂mean (g s⁻¹)", 5),
+    ("COpeak", SHEET_GAS, "COpeak (g s⁻¹) — 시험별 CO 생성속도 최대값 [참고: 일부 시험은 후반 훈소 구간에서 최대]", "CO",
+     "max", "0.000000", 5, "COpeak (g s⁻¹)\n[참고]", 5),
+    ("CO2peak", SHEET_GAS, "CO₂peak (g s⁻¹) — 시험별 CO₂ 생성속도 최대값 [참고]", "CO2", "max", "0.00000", 4,
+     "CO₂peak (g s⁻¹)\n[참고]", 4),
+    ("COCO2", SHEET_GAS, "CO/CO₂ (–) — 시험별 CO 평균 / CO₂ 평균 (0–600 s) [참고]", "CO", "ratio", "0.000", 3,
+     "CO/CO₂ (–)\n[참고]", 3),
 ]
-TABLE2_ORDER = ["HRRpeak", "HRRmean", "THRmean", "SPRpeak", "SPRmean", "COmean", "CO2mean", "THR600"]
+TABLE2_ORDER = ["HRRpeak", "HRRmean", "THRmean", "SPRpeak", "SPRmean", "COmean", "CO2mean", "THR600",
+                "COpeak", "CO2peak", "COCO2"]
+N_TABLE2 = 7  # columns that correspond to the manuscript's Table 2; the rest are reference columns
 MANUSCRIPT_HEADERS = {  # manuscript Table 2 header -> metric id
     "HRRpeak": "HRRpeak", "HRRmean": "HRRmean", "THRmean": "THRmean", "SPRpeak": "SPRpeak",
     "SPRmean": "SPRmean", "COmean": "COmean", "CO₂mean": "CO2mean", "CO2mean": "CO2mean",
@@ -209,6 +217,9 @@ def per_test_formula(raw_sheet, col, kind):
         return f"=MAX({rng})"
     if kind == "mean":
         return f"=AVERAGE({rng})"
+    if kind == "ratio":  # CO/CO2: mean CO production over mean CO2 production of the same test
+        co2 = f"{q('원자료_CO2')}!{col}{RAW_FIRST}:{col}{RAW_LAST}"
+        return f"=AVERAGE({rng})/AVERAGE({co2})"
     return f"={q(raw_sheet)}!{col}{RAW_LAST}"
 
 
@@ -415,7 +426,7 @@ def write_table2(wb, loc, n_tests):
         style_range(ws, [ws.cell(r_top + 1, j) for j in range(1, last_col + 1)], font=F_BOLD, fill=FILL_HEAD,
                     align=CENTER)
         ws.row_dimensions[r_top + 1].height = 32
-    cv_rng = f"C{r_cv + 2}:{get_column_letter(last_col - 1)}{r_cv + 7}"  # Table 2 columns (without reference)
+    cv_rng = f"C{r_cv + 2}:{get_column_letter(first_col + N_TABLE2 - 1)}{r_cv + 7}"  # manuscript Table 2 columns only
     ws.conditional_formatting.add(f"C{r_cv + 2}:{get_column_letter(last_col)}{r_cv + 7}",
                                   FormulaRule(formula=[f"AND(ISNUMBER(C{r_cv + 2}),C{r_cv + 2}>5)"],
                                               fill=FILL_FLAG))
@@ -667,7 +678,13 @@ def main():
 
     # per-test values in numpy (used for notes and printed as a cross-check of the Excel formulas)
     reduce = {"max": np.max, "mean": np.mean, "end": lambda y: y[-1]}
-    values = {(m[0], s): np.array([reduce[m[4]](y) for _, y in runs[m[3]][s]]) for m in METRICS for s in SAMPLES}
+    values = {}
+    for m in METRICS:
+        for s in SAMPLES:
+            if m[4] == "ratio":
+                values[(m[0], s)] = np.array([np.mean(a) / np.mean(b) for (_, a), (_, b) in zip(runs["CO"][s], runs["CO2"][s])])
+            else:
+                values[(m[0], s)] = np.array([reduce[m[4]](y) for _, y in runs[m[3]][s]])
 
     wb = openpyxl.Workbook()
     readme = wb.active
@@ -695,7 +712,7 @@ def main():
             peak_shift[s] = (of_avg, avg_of)
     # configurations whose later tests exceed the first two in every metric
     split_samples = [s for s in SAMPLES if n_by_sample[s] >= 4 and all(
-        min(values[(m[0], s)][2:]) > max(values[(m[0], s)][:2]) for m in METRICS)]
+        min(values[(m[0], s)][2:]) > max(values[(m[0], s)][:2]) for m in METRICS if m[4] != "ratio")]
     # Dixon Q (95 %) on the included tests, same rule as the outlier sheet
     q_crit = {3: 0.970, 4: 0.829, 5: 0.710}
     outliers = []
