@@ -52,6 +52,7 @@ SHEET_T2 = "Table 2 (mean±SD)"
 SHEET_CMP = "Table 2 비교"
 SHEET_IND = "개별값 (Table S)"
 SHEET_INC = "시험 포함 여부"
+SHEET_OUT = "이상치 검정"
 INC_FIRST = 3  # first test row on the inclusion sheet
 DASH = "–"
 
@@ -81,6 +82,11 @@ MANUSCRIPT_HEADERS = {  # manuscript Table 2 header -> metric id
     "SPRmean": "SPRmean", "COmean": "COmean", "CO₂mean": "CO2mean", "CO2mean": "CO2mean",
 }
 # how the manuscript Table 2 values were obtained (summary sheets of the source workbooks)
+# why a recomputed mean can differ from the manuscript value (besides excluded tests)
+MANUSCRIPT_CAUSE = {
+    "HRRpeak": "원고 = 시험 평균 곡선의 최대값 (시험별 피크 시각이 달라 낮게 나옴)",
+    "HRRmean": "원고 요약시트의 시작점(0–5 s) 음수 기저선 0 처리 차이",
+}
 MANUSCRIPT_METHOD = {
     "HRRpeak": "시험 평균 곡선의 최대값 (141B_HRR 'HRR' 시트 J3:O3)",
     "HRRmean": "시험 평균 곡선의 0–600 s 평균, 첫 1–2개 점 0 처리 (141B_HRR 'HRR' 시트 J4:O4)",
@@ -418,18 +424,22 @@ def write_table2(wb, loc, n_tests):
     ws.freeze_panes = "C5"
 
 
-def write_comparison(wb, loc, manuscript):
+def write_comparison(wb, loc, manuscript, n_tests):
+    """Manuscript Table 2 vs recomputed means, graded 일치 / 근사 일치 / 불일치 with the cause."""
     ws = wb.create_sheet(SHEET_CMP)
     ws["A1"] = "원고 Table 2 값 vs 개별 시험 기반 재계산 평균 (재계산 = 각 시험에서 값을 구한 뒤 평균)"
     ws["A1"].font = F_TITLE
-    heads = ["항목", "시료", "원고 Table 2", "재계산 평균\n(개별 시험 평균)", "차이\n(재계산−원고)", "차이 (%)",
-             "원고\n소수 자릿수", "원고 자릿수로\n반올림 시 일치", "원고 값의 계산 방식", "n"]
+    heads = ["항목", "시료", "원고 Table 2", "재계산 평균\n(개별 시험 평균)", "재계산\n(원고 자릿수 반올림)",
+             "차이\n(재계산−원고)", "차이 (%)", "원고\n소수 자릿수", "끝자리 차이\n(단위 수)", "판정", "차이 원인",
+             "원고 값의 계산 방식", "n"]
     for j, h in enumerate(heads, start=1):
-        ws.cell(2, j, h)
-    style_range(ws, ws[2], font=F_BOLD, fill=FILL_HEAD, align=CENTER)
-    ws.row_dimensions[2].height = 32
+        ws.cell(3, j, h)
+    style_range(ws, ws[3], font=F_BOLD, fill=FILL_HEAD, align=CENTER)
+    ws.row_dimensions[3].height = 32
+    inc = q(SHEET_INC)
+    inc_last = INC_FIRST + n_tests - 1
     meta = {m[0]: m for m in METRICS}
-    r = 3
+    first = r = 4
     for mid in TABLE2_ORDER:
         if mid not in manuscript:
             continue
@@ -443,24 +453,88 @@ def write_comparison(wb, loc, manuscript):
             c.font, c.number_format = F_INPUT, fmt
             c = ws.cell(r, 4, f"={q(sheet)}!$H${rr}")
             c.font, c.number_format = F_LINK, fmt
-            ws.cell(r, 5, f'=IF(ISNUMBER(D{r}),D{r}-C{r},"{DASH}")').number_format = fmt
-            ws.cell(r, 6, f'=IF(AND(ISNUMBER(D{r}),C{r}<>0),(D{r}-C{r})/C{r},"{DASH}")').number_format = "0.0%"
-            ws.cell(r, 7, decimals).font = F_INPUT
-            ws.cell(r, 8, f'=IF(ISNUMBER(D{r}),IF(ABS(ROUND(D{r},G{r})-C{r})<10^-(G{r}+3),"일치","불일치"),"{DASH}")')
-            ws.cell(r, 9, MANUSCRIPT_METHOD[mid]).font = F_NOTE
-            ws.cell(r, 10, f"={q(sheet)}!$F${rr}").font = F_LINK
-            for j in (5, 6, 8):
+            ws.cell(r, 5, f'=IF(ISNUMBER(D{r}),ROUND(D{r},H{r}),"{DASH}")').number_format = fmt
+            ws.cell(r, 6, f'=IF(ISNUMBER(D{r}),D{r}-C{r},"{DASH}")').number_format = fmt
+            ws.cell(r, 7, f'=IF(AND(ISNUMBER(D{r}),C{r}<>0),(D{r}-C{r})/C{r},"{DASH}")').number_format = "0.0%"
+            ws.cell(r, 8, decimals).font = F_INPUT
+            ws.cell(r, 9, f'=IF(ISNUMBER(E{r}),ROUND(ABS(E{r}-C{r})*10^H{r},0),"{DASH}")')
+            ws.cell(r, 10, f'=IF(ISNUMBER(I{r}),IF(I{r}=0,"일치",IF(I{r}<=2,"근사 일치","불일치")),"{DASH}")')
+            excl = (f'COUNTIFS({inc}!$A${INC_FIRST}:$A${inc_last},"{s}",'
+                    f'{inc}!$D${INC_FIRST}:$D${inc_last},"제외")>0')
+            cause = MANUSCRIPT_CAUSE.get(mid, "")
+            if cause:
+                ws.cell(r, 11, f'=IF(J{r}="일치","",IF({excl},"{s} 시험 제외 영향. ","")&"{cause}")')
+            else:
+                ws.cell(r, 11, f'=IF(J{r}="일치","",IF({excl},"{s} 시험 제외 영향.","원인 확인 필요"))')
+            ws.cell(r, 12, MANUSCRIPT_METHOD[mid]).font = F_NOTE
+            ws.cell(r, 13, f"={q(sheet)}!$F${rr}").font = F_LINK
+            for j in (5, 6, 7, 9, 10, 11):
                 ws.cell(r, j).font = F_BASE
-            for j in (7, 8, 10):
+            for j in (8, 9, 10, 13):
                 ws.cell(r, j).alignment = Alignment(horizontal="center")
             r += 1
         r += 1
-    ws.conditional_formatting.add(f"H3:H{r}", CellIsRule(operator="equal", formula=['"불일치"'], fill=FILL_FLAG,
-                                                          font=F_RED))
-    ws.cell(r, 1, "원고 Table 2 값: 원고 파일(BKCS_PUF_SkinLayer_Final_260913.docx) Table 2에서 읽어 입력한 값. "
-                  "'불일치' = 재계산 평균을 원고와 같은 자릿수로 반올림해도 원고 값과 다름. "
-                  f"재계산 평균은 '{SHEET_INC}' 시트에서 '제외'한 시험을 뺀 값.").font = F_NOTE
-    for col, w in zip("ABCDEFGHIJ", [10, 7, 13, 15, 13, 10, 9, 13, 62, 5]):
+    last = r - 1
+    ws["A2"] = (f'="판정 합계 — 일치 "&COUNTIF(J{first}:J{last},"일치")&" · 근사 일치 "&COUNTIF(J{first}:J{last},"근사 일치")'
+                f'&" · 불일치 "&COUNTIF(J{first}:J{last},"불일치")')
+    ws["A2"].font = F_BOLD
+    ws.conditional_formatting.add(f"J{first}:J{last}", CellIsRule(operator="equal", formula=['"불일치"'],
+                                                                  fill=FILL_FLAG, font=F_RED))
+    ws.conditional_formatting.add(f"J{first}:J{last}", CellIsRule(operator="equal", formula=['"근사 일치"'],
+                                                                  fill=PatternFill("solid", fgColor="FFF2CC",
+                                                                                   bgColor="FFF2CC")))
+    notes = [
+        "판정: 재계산 평균을 원고와 같은 소수 자릿수로 반올림해서 비교. 일치 = 같음 · 근사 일치 = 원고 마지막 자리에서 1~2 차이"
+        "(예: 15.25 vs 15.27, 반올림만으로 같아지지는 않지만 무시할 수준) · 불일치 = 그보다 큰 차이.",
+        "원고 Table 2 값: 원고 파일(BKCS_PUF_SkinLayer_Final_260913.docx) Table 2에서 읽어 입력한 값. "
+        f"재계산 평균은 '{SHEET_INC}' 시트에서 '제외'한 시험을 뺀 값.",
+    ]
+    for i, text in enumerate(notes):
+        ws.cell(r + i, 1, text).font = F_NOTE
+    for col, w in zip("ABCDEFGHIJKLM", [10, 7, 13, 15, 14, 13, 10, 9, 10, 10, 58, 58, 5]):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = "C4"
+
+
+def write_outlier_check(wb, loc):
+    """Dixon Q test (95 %) on the included tests of every metric and configuration."""
+    ws = wb.create_sheet(SHEET_OUT)
+    ws["A1"] = ("이상치 검정 — Dixon Q (95%, 임계값 n=3: 0.970, n=4: 0.829; Rorabacher 1991). "
+                "포함된 시험만 사용, 모든 시료·항목에 같은 기준 적용")
+    ws["A1"].font = F_TITLE
+    heads = ["항목", "시료", "n", "최소", "최대", "Dixon Q", "임계값 (95%)", "판정", "의심값"]
+    for j, h in enumerate(heads, start=1):
+        ws.cell(2, j, h)
+    style_range(ws, ws[2], font=F_BOLD, fill=FILL_HEAD, align=CENTER)
+    meta = {m[0]: m for m in METRICS}
+    first = r = 3
+    for mid in TABLE2_ORDER:
+        for s in SAMPLES:
+            sheet, rr = loc[(mid, s)]
+            rng = f"{q(sheet)}!$B${rr}:$E${rr}"
+            fmt = meta[mid][5]
+            gap_hi, gap_lo = f"(LARGE({rng},1)-LARGE({rng},2))", f"(SMALL({rng},2)-SMALL({rng},1))"
+            ws.cell(r, 1, mid).font = F_BOLD
+            ws.cell(r, 2, s).font = F_BOLD
+            ws.cell(r, 3, f"={q(sheet)}!$F${rr}").font = F_LINK
+            ws.cell(r, 4, f'=IF(C{r}>=1,MIN({rng}),"{DASH}")').number_format = fmt
+            ws.cell(r, 5, f'=IF(C{r}>=1,MAX({rng}),"{DASH}")').number_format = fmt
+            ws.cell(r, 6, f'=IF(C{r}<3,"{DASH}",IF(E{r}=D{r},0,MAX({gap_hi},{gap_lo})/(E{r}-D{r})))')
+            ws.cell(r, 6).number_format = "0.000"
+            ws.cell(r, 7, f'=IF(C{r}=3,0.97,IF(C{r}=4,0.829,IF(C{r}=5,0.71,"{DASH}")))').number_format = "0.000"
+            ws.cell(r, 8, f'=IF(C{r}<3,"검정 불가 (n<3)",IF(F{r}>G{r},"이상치 후보","이상치 없음"))')
+            ws.cell(r, 9, f'=IF(H{r}="이상치 후보",IF({gap_hi}>={gap_lo},E{r},D{r}),"")').number_format = fmt
+            for j in range(4, 10):
+                ws.cell(r, j).font = F_BASE
+            for j in (3, 6, 7, 8):
+                ws.cell(r, j).alignment = Alignment(horizontal="center")
+            r += 1
+        r += 1
+    ws.conditional_formatting.add(f"H{first}:H{r}", CellIsRule(operator="equal", formula=['"이상치 후보"'],
+                                                               fill=FILL_FLAG, font=F_RED))
+    ws.cell(r, 1, "이상치 후보가 나와도 자동으로 빼지 않음. 제외는 기술적 사유가 확인될 때 '시험 포함 여부' 시트에서 하고 "
+                  "논문에 밝힘. n=2 이하는 어느 값이 벗어났는지 통계로 판단할 수 없음.").font = F_NOTE
+    for col, w in zip("ABCDEFGHI", [10, 7, 5, 12, 12, 10, 12, 16, 12]):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "C3"
 
@@ -497,7 +571,7 @@ def write_individual(wb, runs, col_of, inc_row):
     ws.freeze_panes = "D3"
 
 
-def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples, excluded):
+def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples, excluded, outliers):
     n_txt = ", ".join(f"{s} {n}" for s, n in n_by_sample.items())
     n_used = {s: n - sum(1 for (es, _) in excluded if es == s) for s, n in n_by_sample.items()}
     excl_lines = [(f"· {s}-{k}: {reason or '제외 사유 미입력'}  → {s} 통계는 {n_used[s]}회 시험 기준"
@@ -512,8 +586,9 @@ def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples, e
         ("   표준편차(STDEV.P) · 평균값 · ± · 평균값-표준편차 · (평균값-표준편차)/평균값 · 93% 판정, 추가로 STDEV.S", None),
         (f"· {SHEET_T2}: 논문 Table 2에 넣을 '평균 ± 표준편차' 문자열과 n", None),
         ("   (B2에서 SD 종류, 3행에서 소수 자릿수 선택) + CV(%) 표 + 오차막대용 숫자 표", None),
-        (f"· {SHEET_CMP}: 현재 원고 Table 2 값과 개별 시험 기반 재계산 평균 비교" if manuscript_given
-         else f"· {SHEET_CMP}: (원고 파일 미지정으로 생략)", None),
+        (f"· {SHEET_CMP}: 현재 원고 Table 2 값과 개별 시험 기반 재계산 평균 비교 — 일치 / 근사 일치(끝자리 1~2 차이) / "
+         "불일치 판정과 차이 원인" if manuscript_given else f"· {SHEET_CMP}: (원고 파일 미지정으로 생략)", None),
+        (f"· {SHEET_OUT}: 모든 시료·항목에 Dixon Q 이상치 검정(95%)을 같은 기준으로 적용한 결과", None),
         (f"· {SHEET_IND}: 시험별 개별값 (Supplementary table 용)", None),
         (f"· {SHEET_INC}: 시험별 포함/제외 스위치와 제외 사유 (제외 시 모든 항목의 통계에서 빠지고 Table 2 각주에 자동 기재)",
          None),
@@ -539,6 +614,8 @@ def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples, e
             "— 시편·시험 조건 차이 여부 확인 권장.", None) for s in split_samples],
         ("5. THRmean(THR 누적곡선의 시간평균)은 통상 쓰이지 않는 지표 — 시험 종료 시점 THR(600 s)을 참고 열로 함께 계산함.",
          None),
+        ("6. 이상치 검정(Dixon Q, 95%, n≥3인 시료): " + (", ".join(f"{m} {s} {v:.4g}" for m, s, v in outliers)
+                                                    if outliers else "모든 항목에서 이상치 후보 없음"), None),
     ]
     for i, (text, font) in enumerate(lines, start=1):
         c = ws.cell(i, 1, text)
@@ -591,7 +668,8 @@ def main():
     write_table2(wb, loc, n_tests)
     manuscript = read_manuscript_table2(args.manuscript) if args.manuscript else None
     if manuscript:
-        write_comparison(wb, loc, manuscript)
+        write_comparison(wb, loc, manuscript, n_tests)
+    write_outlier_check(wb, loc)
     write_individual(wb, runs, col_of, inc_row)
     # peak of the test-averaged HRR curve (manuscript method) vs mean of the individual peaks
     peak_shift = {}
@@ -604,10 +682,20 @@ def main():
     # configurations whose later tests exceed the first two in every metric
     split_samples = [s for s in SAMPLES if n_by_sample[s] >= 4 and all(
         min(values[(m[0], s)][2:]) > max(values[(m[0], s)][:2]) for m in METRICS)]
-    write_readme(readme, n_by_sample, bool(manuscript), peak_shift, split_samples, excluded)
+    # Dixon Q (95 %) on the included tests, same rule as the outlier sheet
+    q_crit = {3: 0.970, 4: 0.829, 5: 0.710}
+    outliers = []
+    for m in METRICS:
+        for s in SAMPLES:
+            v = np.sort([x for k, x in enumerate(values[(m[0], s)], start=1) if (s, k) not in excluded])
+            if len(v) in q_crit and v[-1] > v[0]:
+                hi, lo = v[-1] - v[-2], v[1] - v[0]
+                if max(hi, lo) / (v[-1] - v[0]) > q_crit[len(v)]:
+                    outliers.append((m[0], s, v[-1] if hi >= lo else v[0]))
+    write_readme(readme, n_by_sample, bool(manuscript), peak_shift, split_samples, excluded, outliers)
 
     order = ["설명", SHEET_INC, SHEET_HRR, SHEET_SPR, SHEET_GAS, SHEET_T2] + ([SHEET_CMP] if manuscript else []) + \
-        [SHEET_IND] + [f"원자료_{k}" for k in QUANTITIES]
+        [SHEET_OUT, SHEET_IND] + [f"원자료_{k}" for k in QUANTITIES]
     wb._sheets = [wb[n] for n in order]
     wb.active = 0
     for ws in wb.worksheets:  # print each summary sheet landscape, one page wide
