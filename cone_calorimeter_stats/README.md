@@ -19,8 +19,18 @@
 ```bash
 pip install openpyxl numpy python-docx
 python build_table2_stats.py --manuscript data/manuscript.docx
+# 특정 시험을 통계에서 제외할 때 (사유는 Table 2 각주에 들어감)
+python build_table2_stats.py --manuscript data/manuscript.docx --exclude BSK-1 --reason "BSK-1=<기술적 사유>"
 # 캐시 값을 채우려면 LibreOffice(Calc)로 한 번 재계산
 ```
+
+## 시험 제외
+
+- 제외한 시험도 원자료·개별값 시트에는 그대로 남고, `시험 포함 여부` 시트의 스위치(`포함`/`제외`)로만 통계에서 빠진다.
+  엑셀에서 스위치를 바꾸면 모든 항목(HRR·THR·SPR·CO·CO₂)이 다시 계산된다.
+- 한 시험편을 빼면 그 시험의 모든 항목이 함께 빠진다(항목별 선택 제외는 하지 않음).
+- n = 1이 된 시료는 표준편차를 계산하지 않고 Table 2에 단일값(ᵃ)으로 표시하며, 각주에 제외한 시험과 사유가 자동으로 들어간다.
+- 제외는 결과와 무관한 기술적 사유(시편 결함, 장비·절차 이상 등)가 있을 때만 하고, 논문에 제외 사실과 사유를 밝힌다.
 
 ## 출력 시트 (`output/141B_PUF_cone_replicate_stats.xlsx`)
 

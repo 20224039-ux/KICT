@@ -10,11 +10,13 @@ per configuration (BSK, SKM, S1H, S2H, S1V, S2V) with the individual test curves
 It also builds a revised Table 2 (mean ± SD with n, selectable STDEV.S / STDEV.P), a
 comparison with the manuscript's current Table 2 (parsed from the .docx when given) and a
 table of individual replicate values. Every statistic is an Excel formula, so the
-workbook recalculates if a raw value is corrected.
+workbook recalculates if a raw value is corrected. Tests can be excluded (--exclude BSK-1):
+the raw data stay in the workbook, the test is marked '제외' on the '시험 포함 여부' sheet
+(switchable back to '포함') and the exclusion is written into the Table 2 footnote.
 
 Usage:
     python build_table2_stats.py --data-dir data --manuscript data/manuscript.docx \
-        --out output/141B_PUF_cone_replicate_stats.xlsx
+        --out output/141B_PUF_cone_replicate_stats.xlsx [--exclude BSK-1 --reason "BSK-1=..."]
 """
 
 import argparse
@@ -49,6 +51,9 @@ SHEET_GAS = "STDEV(3) CO·CO2"
 SHEET_T2 = "Table 2 (mean±SD)"
 SHEET_CMP = "Table 2 비교"
 SHEET_IND = "개별값 (Table S)"
+SHEET_INC = "시험 포함 여부"
+INC_FIRST = 3  # first test row on the inclusion sheet
+DASH = "–"
 
 # id, sheet, block title, raw quantity, per-test reduction, number format, ± decimals,
 # Table 2 header, default Table 2 decimals
@@ -200,12 +205,52 @@ def peak_time_formula(raw_sheet, cols, cells, prefix=""):
     """'<prefix>피크 시각(s): 10 / 30' built from the raw curves."""
     parts = []
     for col, cell in zip(cols, cells):
-        parts.append(f"INDEX({q(raw_sheet)}!$A${RAW_FIRST}:$A${RAW_LAST},"
-                     f"MATCH({cell},{q(raw_sheet)}!{col}{RAW_FIRST}:{col}{RAW_LAST},0))")
+        parts.append(f"IFERROR(INDEX({q(raw_sheet)}!$A${RAW_FIRST}:$A${RAW_LAST},"
+                     f"MATCH({cell},{q(raw_sheet)}!{col}{RAW_FIRST}:{col}{RAW_LAST},0)),\"제외\")")
     return f'="{prefix}피크 시각(s): "&' + '&" / "&'.join(parts)
 
 
-def write_stdev_sheets(wb, runs, col_of, values):
+def write_inclusion_sheet(wb, runs, excluded):
+    """One row per test with a 포함/제외 switch; returns {(sample, k): row}."""
+    ws = wb.create_sheet(SHEET_INC)
+    ws["A1"] = ("시험별 포함 여부 — D열을 '제외'로 두면 그 시험은 모든 항목(HRR·THR·SPR·CO·CO₂)의 통계에서 빠짐 "
+                "(원자료는 그대로 유지, '포함'으로 바꾸면 다시 계산됨)")
+    ws["A1"].font = F_BOLD
+    for j, h in enumerate(["Sample", "Test", "원본 열", "포함 여부", "제외 사유 (논문 각주에 들어감)", "각주용"], start=1):
+        ws.cell(2, j, h)
+    style_range(ws, ws[2], font=F_BOLD, fill=FILL_HEAD, align=CENTER)
+    dv = DataValidation(type="list", formula1='"포함,제외"', allow_blank=False)
+    ws.add_data_validation(dv)
+    row_of = {}
+    r = INC_FIRST
+    for s in SAMPLES:
+        for k, (src_col, _) in enumerate(runs["HRR"][s], start=1):
+            ws.cell(r, 1, s).font = F_BOLD
+            ws.cell(r, 2, k)
+            ws.cell(r, 3, f"{s}!{src_col}").font = F_NOTE
+            c = ws.cell(r, 4, "제외" if (s, k) in excluded else "포함")
+            c.font, c.fill, c.alignment = F_INPUT, FILL_SELECT, Alignment(horizontal="center")
+            dv.add(c.coordinate)
+            c = ws.cell(r, 5, excluded.get((s, k), ""))
+            c.font, c.fill = F_INPUT, FILL_SELECT
+            ws.cell(r, 6, f'=IF(D{r}="제외",A{r}&"-"&B{r}&IF(E{r}="",""," ("&E{r}&")"),"")').font = F_NOTE
+            row_of[(s, k)] = r
+            r += 1
+    last = r - 1
+    ws.conditional_formatting.add(f"A{INC_FIRST}:D{last}", FormulaRule(formula=[f'$D{INC_FIRST}="제외"'],
+                                                                         fill=FILL_FLAG))
+    ws.conditional_formatting.add(f"E{INC_FIRST}:E{last}",
+                                  FormulaRule(formula=[f'AND($D{INC_FIRST}="제외",$E{INC_FIRST}="")'],
+                                              fill=PatternFill("solid", fgColor="FF7C80", bgColor="FF7C80")))
+    ws.cell(last + 2, 1, "제외 사유가 비어 있으면 빨간색으로 표시됨. 시험을 빼려면 결과와 무관한 기술적 사유(시편 결함, 장비·절차 이상 "
+                         "등)를 적고, 논문에 제외 사실과 사유를 밝혀야 함.").font = F_NOTE
+    for col, w in zip("ABCDEF", [8, 6, 9, 10, 60, 30]):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = "A3"
+    return row_of
+
+
+def write_stdev_sheets(wb, runs, col_of, values, inc_row, excluded):
     """Template-style blocks; returns {(metric, sample): (sheet, row)}."""
     headers = ["항목 / 시료", 1, 2, 3, 4, "n", "표준편차\n(STDEV.P)", "평균값", "± (STDEV.P)", "평균값-표준편차",
                "(평균값-표준편차)\n/평균값", "판정 (≥93%)", "표준편차\n(STDEV.S, n−1)", "비고"]
@@ -234,26 +279,26 @@ def write_stdev_sheets(wb, runs, col_of, values):
             n = len(runs[raw_key][s])
             cells, cols = [], []
             for k in range(1, n + 1):
-                c = ws.cell(r, 1 + k, per_test_formula(raw_sheet, col_of[(s, k)], kind))
+                flag = f"{q(SHEET_INC)}!$D${inc_row[(s, k)]}"
+                expr = per_test_formula(raw_sheet, col_of[(s, k)], kind)[1:]
+                c = ws.cell(r, 1 + k, f'=IF({flag}="제외","",{expr})')
                 c.font, c.number_format = F_LINK, fmt
                 cells.append(c.coordinate)
                 cols.append(col_of[(s, k)])
             rng = f"B{r}:E{r}"
             ws.cell(r, 6, f"=COUNT({rng})")
-            ws.cell(r, 7, f"=STDEVP({rng})").number_format = fmt
-            ws.cell(r, 8, f"=AVERAGE({rng})").number_format = fmt
-            ws.cell(r, 9, f'="±"&TEXT(G{r},"0.{"0" * pm_dec}")')
-            ws.cell(r, 10, f"=H{r}-G{r}").number_format = fmt
-            ws.cell(r, 11, f"=(H{r}-G{r})/H{r}").number_format = "0.0%"
-            ws.cell(r, 12, f'=IF(K{r}>=0.93,"충족","93%미만")')
-            ws.cell(r, 13, f"=STDEV({rng})").number_format = fmt
+            ws.cell(r, 7, f'=IF(F{r}>=2,STDEVP({rng}),"{DASH}")').number_format = fmt
+            ws.cell(r, 8, f'=IF(F{r}>=1,AVERAGE({rng}),"{DASH}")').number_format = fmt
+            ws.cell(r, 9, f'=IF(F{r}>=2,"±"&TEXT(G{r},"0.{"0" * pm_dec}"),"{DASH}")')
+            ws.cell(r, 10, f'=IF(F{r}>=2,H{r}-G{r},"{DASH}")').number_format = fmt
+            ws.cell(r, 11, f'=IF(F{r}>=2,(H{r}-G{r})/H{r},"{DASH}")').number_format = "0.0%"
+            ws.cell(r, 12, f'=IF(F{r}<2,"판정 불가(n<2)",IF(K{r}>=0.93,"충족","93%미만"))')
+            ws.cell(r, 13, f'=IF(F{r}>=2,STDEV({rng}),"{DASH}")').number_format = fmt
             for j in range(6, 14):
                 ws.cell(r, j).font = F_BASE
-            ws.cell(r, 9).alignment = Alignment(horizontal="right")
-            # notes: sample size, S2H split, peak times
-            notes = []
-            if n != 3:
-                notes.append(f"n={n}")
+                ws.cell(r, j).alignment = Alignment(horizontal="right")
+            # notes: excluded tests, S2H split, peak times
+            notes = [f"{s}-{k} 제외" for k in range(1, n + 1) if (s, k) in excluded]
             v = values[(mid, s)]
             if s == "S2H" and n == 4 and min(v[2:]) > max(v[:2]):
                 notes.append("3·4번 시험 > 1·2번 시험")
@@ -270,7 +315,7 @@ def write_stdev_sheets(wb, runs, col_of, values):
     return loc
 
 
-def write_table2(wb, loc):
+def write_table2(wb, loc, n_tests):
     ws = wb.create_sheet(SHEET_T2)
     ws["A1"] = ("Table 2 (revised). Combustion characteristics of PUF specimens with HCFC-141b blowing agent "
                 "at an external radiant heat flux of 50 kW m⁻² (ISO 5660-1): mean ± SD of individual tests")
@@ -299,7 +344,9 @@ def write_table2(wb, loc):
         for i, s in enumerate(SAMPLES):
             sheet, r = loc[(mid, s)]
             sd = f'IF($B$2="STDEV.P",{q(sheet)}!$G${r},{q(sheet)}!$M${r})'
-            ws.cell(5 + i, col, f"=TEXT({q(sheet)}!$H${r},{fmt})&\" ± \"&TEXT({sd},{fmt})").font = F_LINK
+            n_ref, mean = f"{q(sheet)}!$F${r}", f"{q(sheet)}!$H${r}"
+            ws.cell(5 + i, col, f'=IF({n_ref}>=2,TEXT({mean},{fmt})&" ± "&TEXT({sd},{fmt}),'
+                                f'IF({n_ref}=1,TEXT({mean},{fmt})&"ᵃ","{DASH}"))').font = F_LINK
             ws.cell(5 + i, col).alignment = Alignment(horizontal="center")
     for i, s in enumerate(SAMPLES):
         sheet, r = loc[("HRRpeak", s)]
@@ -315,7 +362,11 @@ def write_table2(wb, loc):
     ws["A12"] = ("HRRpeak and SPRpeak: maximum of each test curve. HRRmean, SPRmean, COmean and CO₂mean: average "
                  "over 0–600 s. THRmean: time-average of the THR curve over 0–600 s (definition used in the "
                  "current Table 2); THR at 600 s: total heat released at the end of the test (reference column).")
-    for r in (11, 12):
+    inc_last = INC_FIRST + n_tests - 1
+    ws["A13"] = (f'=IF(COUNTIF($B$5:$B$10,1)>0,"ᵃ Single test (n = 1); SD not available. ","")'
+                 f'&IF(COUNTIF({q(SHEET_INC)}!$D${INC_FIRST}:$D${inc_last},"제외")=0,"",'
+                 f'"Excluded test(s): "&_xlfn.TEXTJOIN("; ",TRUE,{q(SHEET_INC)}!$F${INC_FIRST}:$F${inc_last})&".")')
+    for r in (11, 12, 13):
         ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=last_col)
         ws.cell(r, 1).font = F_NOTE
         ws.cell(r, 1).alignment = WRAP
@@ -338,12 +389,13 @@ def write_table2(wb, loc):
                 sheet, r = loc[(mid, s)]
                 mean = f"{q(sheet)}!$H${r}"
                 sd = f'IF($B$2="STDEV.P",{q(sheet)}!$G${r},{q(sheet)}!$M${r})'
+                n_ref = f"{q(sheet)}!$F${r}"
                 if label == "CV":
-                    f, fmt = f"={sd}/{mean}*100", "0.0"
+                    f, fmt = f'=IF({n_ref}>=2,{sd}/{mean}*100,"{DASH}")', "0.0"
                 elif label == "평균값":
                     f, fmt = f"={mean}", meta[mid][5]
                 else:
-                    f, fmt = f"={sd}", meta[mid][5]
+                    f, fmt = f'=IF({n_ref}>=2,{sd},"{DASH}")', meta[mid][5]
                 c = ws.cell(r_top + 2 + i, col, f)
                 c.font, c.number_format = F_LINK, fmt
         for i, s in enumerate(SAMPLES):
@@ -354,8 +406,9 @@ def write_table2(wb, loc):
         ws.row_dimensions[r_top + 1].height = 32
     cv_rng = f"C{r_cv + 2}:{get_column_letter(last_col - 1)}{r_cv + 7}"  # Table 2 columns (without reference)
     ws.conditional_formatting.add(f"C{r_cv + 2}:{get_column_letter(last_col)}{r_cv + 7}",
-                                  CellIsRule(operator="greaterThan", formula=["5"], fill=FILL_FLAG))
-    ws.cell(r_cv + 8, 1, f'="CV 5% 초과: "&COUNTIF({cv_rng},">5")&" / "&COUNT({cv_rng})&" 칸 (Table 2의 7개 항목 × 6개 시료)"')
+                                  FormulaRule(formula=[f"AND(ISNUMBER(C{r_cv + 2}),C{r_cv + 2}>5)"],
+                                              fill=FILL_FLAG))
+    ws.cell(r_cv + 8, 1, f'="CV 5% 초과: "&COUNTIF({cv_rng},">5")&" / "&COUNT({cv_rng})&" 칸 (Table 2의 7개 항목 × 6개 시료 중 n≥2인 칸)"')
     ws.cell(r_cv + 8, 1).font = F_BOLD
 
     ws.column_dimensions["A"].width = 16
@@ -390,10 +443,10 @@ def write_comparison(wb, loc, manuscript):
             c.font, c.number_format = F_INPUT, fmt
             c = ws.cell(r, 4, f"={q(sheet)}!$H${rr}")
             c.font, c.number_format = F_LINK, fmt
-            ws.cell(r, 5, f"=D{r}-C{r}").number_format = fmt
-            ws.cell(r, 6, f"=IF(C{r}=0,\"\",(D{r}-C{r})/C{r})").number_format = "0.0%"
+            ws.cell(r, 5, f'=IF(ISNUMBER(D{r}),D{r}-C{r},"{DASH}")').number_format = fmt
+            ws.cell(r, 6, f'=IF(AND(ISNUMBER(D{r}),C{r}<>0),(D{r}-C{r})/C{r},"{DASH}")').number_format = "0.0%"
             ws.cell(r, 7, decimals).font = F_INPUT
-            ws.cell(r, 8, f'=IF(ABS(ROUND(D{r},G{r})-C{r})<10^-(G{r}+3),"일치","불일치")')
+            ws.cell(r, 8, f'=IF(ISNUMBER(D{r}),IF(ABS(ROUND(D{r},G{r})-C{r})<10^-(G{r}+3),"일치","불일치"),"{DASH}")')
             ws.cell(r, 9, MANUSCRIPT_METHOD[mid]).font = F_NOTE
             ws.cell(r, 10, f"={q(sheet)}!$F${rr}").font = F_LINK
             for j in (5, 6, 8):
@@ -405,17 +458,19 @@ def write_comparison(wb, loc, manuscript):
     ws.conditional_formatting.add(f"H3:H{r}", CellIsRule(operator="equal", formula=['"불일치"'], fill=FILL_FLAG,
                                                           font=F_RED))
     ws.cell(r, 1, "원고 Table 2 값: 원고 파일(BKCS_PUF_SkinLayer_Final_260913.docx) Table 2에서 읽어 입력한 값. "
-                  "'불일치' = 재계산 평균을 원고와 같은 자릿수로 반올림해도 원고 값과 다름.").font = F_NOTE
+                  "'불일치' = 재계산 평균을 원고와 같은 자릿수로 반올림해도 원고 값과 다름. "
+                  f"재계산 평균은 '{SHEET_INC}' 시트에서 '제외'한 시험을 뺀 값.").font = F_NOTE
     for col, w in zip("ABCDEFGHIJ", [10, 7, 13, 15, 13, 10, 9, 13, 62, 5]):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "C3"
 
 
-def write_individual(wb, loc, runs):
+def write_individual(wb, runs, col_of, inc_row):
     ws = wb.create_sheet(SHEET_IND)
-    ws["A1"] = "개별 시험값 (Supplementary table 용) — 각 항목의 시험별 값은 STDEV 시트의 1~4열을 참조"
+    ws["A1"] = ("개별 시험값 (Supplementary table 용) — 원자료 곡선에서 직접 계산, "
+                f"'{SHEET_INC}'에서 '제외'한 시험도 값은 보이되 통계에는 쓰이지 않음")
     ws["A1"].font = F_TITLE
-    heads = ["Sample", "Test", "원본 열"] + [m[7].replace("\n[참고]", "") for m in METRICS]
+    heads = ["Sample", "Test", "원본 열", "포함 여부"] + [m[7].replace("\n[참고]", "") for m in METRICS]
     for j, h in enumerate(heads, start=1):
         ws.cell(2, j, h)
     style_range(ws, ws[2], font=F_BOLD, fill=FILL_HEAD, align=CENTER)
@@ -427,20 +482,27 @@ def write_individual(wb, loc, runs):
             ws.cell(r, 1, s).font = F_BOLD
             ws.cell(r, 2, k)
             ws.cell(r, 3, f"{s}!{runs['HRR'][s][k - 1][0]}").font = F_NOTE
+            ws.cell(r, 4, f"={q(SHEET_INC)}!$D${inc_row[(s, k)]}").font = F_LINK
+            ws.cell(r, 4).alignment = Alignment(horizontal="center")
             for j, m in enumerate(METRICS):
-                sheet, rr = loc[(m[0], s)]
-                c = ws.cell(r, 4 + j, f"={q(sheet)}!{get_column_letter(1 + k)}{rr}")
+                c = ws.cell(r, 5 + j, per_test_formula(f"원자료_{m[3]}", col_of[(s, k)], m[4]))
                 c.font, c.number_format = F_LINK, m[5]
             r += 1
+    ws.conditional_formatting.add(f"A3:{get_column_letter(4 + len(METRICS))}{r - 1}",
+                                  FormulaRule(formula=['$D3="제외"'], fill=FILL_FLAG))
     ws.cell(r + 1, 1, "원본 열 = 각 파일(141B_HRR/THR/SPR/CO/CO2.xlsx) 시료별 시트의 같은 열. HRR–THR 시험 순서 일치는 "
                       "THR(600 s) = ∫HRR dt로 확인했고, SPR·CO·CO₂ 파일도 같은 순서로 정리되어 있다고 가정함.").font = F_NOTE
-    for j, w in enumerate([8, 6, 9] + [15] * len(METRICS), start=1):
+    for j, w in enumerate([8, 6, 9, 9] + [15] * len(METRICS), start=1):
         ws.column_dimensions[get_column_letter(j)].width = w
     ws.freeze_panes = "D3"
 
 
-def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples):
+def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples, excluded):
     n_txt = ", ".join(f"{s} {n}" for s, n in n_by_sample.items())
+    n_used = {s: n - sum(1 for (es, _) in excluded if es == s) for s, n in n_by_sample.items()}
+    excl_lines = [(f"· {s}-{k}: {reason or '제외 사유 미입력'}  → {s} 통계는 {n_used[s]}회 시험 기준"
+                   + (" (표준편차 계산 불가)" if n_used[s] < 2 else ""), None)
+                  for (s, k), reason in sorted(excluded.items())]
     shift_txt = ", ".join(f"{s} {a:.2f} → {b:.2f}" for s, (a, b) in peak_shift.items()) or "없음"
     lines = [
         ("141B(HCFC-141b) PUF 6종 콘칼로리미터 반복시험 통계 — 리뷰어 코멘트(Table 2 표준편차) 대응용", F_TITLE),
@@ -453,6 +515,8 @@ def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples):
         (f"· {SHEET_CMP}: 현재 원고 Table 2 값과 개별 시험 기반 재계산 평균 비교" if manuscript_given
          else f"· {SHEET_CMP}: (원고 파일 미지정으로 생략)", None),
         (f"· {SHEET_IND}: 시험별 개별값 (Supplementary table 용)", None),
+        (f"· {SHEET_INC}: 시험별 포함/제외 스위치와 제외 사유 (제외 시 모든 항목의 통계에서 빠지고 Table 2 각주에 자동 기재)",
+         None),
         ("· 원자료_HRR/THR/SPR/CO/CO2: 원본 파일 시료별 시트의 시험 곡선을 그대로 옮김 (값 수정 없음, 음수 기저선 값 포함)", None),
         ("", None),
         ("계산 방법", F_BOLD),
@@ -462,11 +526,12 @@ def write_readme(ws, n_by_sample, manuscript_given, peak_shift, split_samples):
         ("· 모든 통계값은 수식이므로 원자료 시트 값을 고치면 자동으로 다시 계산됨.", None),
         ("· 글자색: 파란색 = 원자료·입력값, 초록색 = 다른 시트를 참조하는 수식, 검정 = 같은 시트 수식. 노란 칸 = 선택·입력 칸.", None),
         ("", None),
+        *([("제외한 시험 (원자료는 그대로 두고 통계에서만 제외)", F_BOLD)] + excl_lines + [("", None)] if excluded else []),
         ("확인이 필요한 사항", F_BOLD),
-        (f"1. 시료별 시험 수(n): {n_txt}", None),
+        (f"1. 원본 파일의 시료별 시험 수: {n_txt}", None),
         ("   — 원고 2.2·2.5절의 'triplicate'와 다름. 원 시험 기록을 확인한 뒤 실제 n을 표기해야 함.", None),
         ("2. 원고 HRRpeak는 '시험 평균 곡선의 최대값'이라, 시험마다 피크 시각이 다르면 개별 시험 피크의 평균보다 낮게 나옴.", None),
-        (f"   평균 곡선 최대값 → 개별 시험 피크 평균 (1% 넘게 다른 시료): {shift_txt}", None),
+        (f"   평균 곡선 최대값 → 개별 시험 피크 평균 (1% 넘게 다른 시료, 제외 시험 반영): {shift_txt}", None),
         (f"   평균 ± SD로 쓰려면 평균도 개별 시험 기준으로 바꿔야 서로 맞음 ({SHEET_CMP} 참조).", None),
         ("3. 원고 2.5절 'triplicate reproducibility typically within 5% of the reported mean'", None),
         (f"   — 실제 CV는 여러 항목에서 5%를 넘음 ({SHEET_T2} 시트의 CV 표 참조).", None),
@@ -488,6 +553,10 @@ def main():
     ap.add_argument("--data-dir", type=Path, default=here / "data")
     ap.add_argument("--manuscript", type=Path, default=None, help="manuscript .docx holding Table 2 (optional)")
     ap.add_argument("--out", type=Path, default=here / "output" / "141B_PUF_cone_replicate_stats.xlsx")
+    ap.add_argument("--exclude", action="append", default=[], metavar="SAMPLE-k",
+                    help="test to leave out of the statistics, e.g. BSK-1 (repeatable)")
+    ap.add_argument("--reason", action="append", default=[], metavar="SAMPLE-k=TEXT",
+                    help="reason for an excluded test, shown in the Table 2 footnote")
     args = ap.parse_args()
 
     runs = {k: read_runs(args.data_dir / f, prefix) for k, (f, prefix, _, _) in QUANTITIES.items()}
@@ -496,6 +565,14 @@ def main():
         counts = {s: len(runs[k][s]) for s in SAMPLES}
         if counts != n_by_sample:
             raise ValueError(f"test counts differ between HRR and {k}: {counts} vs {n_by_sample}")
+    reasons = dict(item.split("=", 1) for item in args.reason)
+    excluded = {}
+    for test in args.exclude:
+        s, _, k = test.rpartition("-")
+        if s not in n_by_sample or not k.isdigit() or not 1 <= int(k) <= n_by_sample[s]:
+            raise ValueError(f"--exclude {test}: no such test")
+        excluded[(s, int(k))] = reasons.get(test, "")
+    n_tests = sum(n_by_sample.values())
 
     # per-test values in numpy (used for notes and printed as a cross-check of the Excel formulas)
     reduce = {"max": np.max, "mean": np.mean, "end": lambda y: y[-1]}
@@ -509,25 +586,27 @@ def main():
     for k, (f, *_rest) in QUANTITIES.items():
         raw_sheets[k] = write_raw_sheet(wb, k, runs[k], f)
         col_of = col_of or raw_sheets[k]
-    loc = write_stdev_sheets(wb, runs, col_of, values)
-    write_table2(wb, loc)
+    inc_row = write_inclusion_sheet(wb, runs, excluded)
+    loc = write_stdev_sheets(wb, runs, col_of, values, inc_row, excluded)
+    write_table2(wb, loc, n_tests)
     manuscript = read_manuscript_table2(args.manuscript) if args.manuscript else None
     if manuscript:
         write_comparison(wb, loc, manuscript)
-    write_individual(wb, loc, runs)
+    write_individual(wb, runs, col_of, inc_row)
     # peak of the test-averaged HRR curve (manuscript method) vs mean of the individual peaks
     peak_shift = {}
     for s in SAMPLES:
         curves = np.array([y for _, y in runs["HRR"][s]])
-        of_avg, avg_of = curves.mean(axis=0).max(), curves.max(axis=1).mean()
+        kept = [k for k in range(len(curves)) if (s, k + 1) not in excluded]
+        of_avg, avg_of = curves.mean(axis=0).max(), curves[kept].max(axis=1).mean()
         if abs(avg_of - of_avg) > 0.01 * of_avg:
             peak_shift[s] = (of_avg, avg_of)
     # configurations whose later tests exceed the first two in every metric
     split_samples = [s for s in SAMPLES if n_by_sample[s] >= 4 and all(
         min(values[(m[0], s)][2:]) > max(values[(m[0], s)][:2]) for m in METRICS)]
-    write_readme(readme, n_by_sample, bool(manuscript), peak_shift, split_samples)
+    write_readme(readme, n_by_sample, bool(manuscript), peak_shift, split_samples, excluded)
 
-    order = ["설명", SHEET_HRR, SHEET_SPR, SHEET_GAS, SHEET_T2] + ([SHEET_CMP] if manuscript else []) + \
+    order = ["설명", SHEET_INC, SHEET_HRR, SHEET_SPR, SHEET_GAS, SHEET_T2] + ([SHEET_CMP] if manuscript else []) + \
         [SHEET_IND] + [f"원자료_{k}" for k in QUANTITIES]
     wb._sheets = [wb[n] for n in order]
     wb.active = 0
@@ -540,11 +619,12 @@ def main():
     wb.save(args.out)
 
     print(f"saved {args.out}")
-    print("n per configuration:", n_by_sample)
+    print("tests per configuration:", n_by_sample, "| excluded:", [f"{s}-{k}" for s, k in excluded])
     for m in METRICS:
         for s in SAMPLES:
-            v = values[(m[0], s)]
-            print(f"{m[0]:8s} {s}: mean={v.mean():.6g} sdP={v.std():.4g} sdS={v.std(ddof=1):.4g}")
+            v = np.array([x for k, x in enumerate(values[(m[0], s)], start=1) if (s, k) not in excluded])
+            sd = (f"sdP={v.std():.4g} sdS={v.std(ddof=1):.4g}" if len(v) >= 2 else "sd n/a (n<2)")
+            print(f"{m[0]:8s} {s}: n={len(v)} mean={v.mean():.6g} {sd}")
 
 
 if __name__ == "__main__":
