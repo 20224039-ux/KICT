@@ -2,3 +2,7 @@
 hollow_layer_fire/data/*.xlsx
 __pycache__/
 *.pyc
+
+# cone calorimeter replicate stats: unpublished test data, manuscript and generated workbook stay local
+cone_calorimeter_stats/data/
+cone_calorimeter_stats/output/
