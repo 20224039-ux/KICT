@@ -20,6 +20,7 @@ Usage:
 """
 
 import argparse
+import re
 from pathlib import Path
 
 import numpy as np
@@ -84,11 +85,11 @@ MANUSCRIPT_HEADERS = {  # manuscript Table 2 header -> metric id
 # how the manuscript Table 2 values were obtained (summary sheets of the source workbooks)
 # why a recomputed mean can differ from the manuscript value (besides excluded tests)
 MANUSCRIPT_CAUSE = {
-    "HRRpeak": "원고 = 시험 평균 곡선의 최대값 (시험별 피크 시각이 달라 낮게 나옴)",
+    "HRRpeak": "원고 값 ≠ 시험별 최대값의 평균 (초기 원고 260913은 시험 평균 곡선의 최대값을 사용)",
     "HRRmean": "원고 요약시트의 시작점(0–5 s) 음수 기저선 0 처리 차이",
 }
 MANUSCRIPT_METHOD = {
-    "HRRpeak": "시험 평균 곡선의 최대값 (141B_HRR 'HRR' 시트 J3:O3)",
+    "HRRpeak": "초기 원고(260913): 시험 평균 곡선의 최대값 (141B_HRR 'HRR' 시트 J3:O3)",
     "HRRmean": "시험 평균 곡선의 0–600 s 평균, 첫 1–2개 점 0 처리 (141B_HRR 'HRR' 시트 J4:O4)",
     "THRmean": "시험 평균 THR 곡선의 0–600 s 시간평균 (141B_THR 'SPR' 시트 J3:O3)",
     "SPRpeak": "시험 평균 곡선의 최대값 (141B_SPR 'SPR' 시트 J3:O3)",
@@ -141,7 +142,7 @@ def read_runs(path, prefix):
 
 
 def read_manuscript_table2(docx_path):
-    """{metric id: {sample: (value, decimals shown)}} from the manuscript table headed 'Sample'."""
+    """{metric id: {sample: (mean, decimals shown, SD or None)}} from the manuscript table headed 'Sample'."""
     import docx
 
     for table in docx.Document(docx_path).tables:
@@ -153,8 +154,12 @@ def read_manuscript_table2(docx_path):
         for j, h in enumerate(head[1:], start=1):
             key = MANUSCRIPT_HEADERS.get(h.split("(")[0].strip())
             if key:
-                out[key] = {r[0]: (float(r[j]), len(r[j].partition(".")[2])) for r in rows
-                            if r and r[0] in SAMPLES}
+                out[key] = {}
+                for r in rows:
+                    if r and r[0] in SAMPLES:
+                        m = re.match(r"\s*([\d.]+)(?:\s*±\s*([\d.]+))?", r[j])  # plain value or "mean ± SD"
+                        mean, sd = m.group(1), m.group(2)
+                        out[key][r[0]] = (float(mean), len(mean.partition(".")[2]), float(sd) if sd else None)
         return out
     raise ValueError(f"{docx_path}: Table 2 (header 'Sample', 'HRRpeak ...') not found")
 
@@ -431,7 +436,7 @@ def write_comparison(wb, loc, manuscript, n_tests):
     ws["A1"].font = F_TITLE
     heads = ["항목", "시료", "원고 Table 2", "재계산 평균\n(개별 시험 평균)", "재계산\n(원고 자릿수 반올림)",
              "차이\n(재계산−원고)", "차이 (%)", "원고\n소수 자릿수", "끝자리 차이\n(단위 수)", "판정", "차이 원인",
-             "원고 값의 계산 방식", "n"]
+             "원고 값의 계산 방식", "n", "원고 SD", "재계산 SD\n(STDEV.S)", "SD 판정\n(원고 자릿수)"]
     for j, h in enumerate(heads, start=1):
         ws.cell(3, j, h)
     style_range(ws, ws[3], font=F_BOLD, fill=FILL_HEAD, align=CENTER)
@@ -446,7 +451,7 @@ def write_comparison(wb, loc, manuscript, n_tests):
         for s in SAMPLES:
             sheet, rr = loc[(mid, s)]
             fmt = meta[mid][5]
-            value, decimals = manuscript[mid][s]
+            value, decimals, man_sd = manuscript[mid][s]
             ws.cell(r, 1, mid).font = F_BOLD
             ws.cell(r, 2, s).font = F_BOLD
             c = ws.cell(r, 3, value)
@@ -468,6 +473,13 @@ def write_comparison(wb, loc, manuscript, n_tests):
                 ws.cell(r, 11, f'=IF(J{r}="일치","",IF({excl},"{s} 시험 제외 영향.","원인 확인 필요"))')
             ws.cell(r, 12, MANUSCRIPT_METHOD[mid]).font = F_NOTE
             ws.cell(r, 13, f"={q(sheet)}!$F${rr}").font = F_LINK
+            if man_sd is not None:  # manuscript also reports an SD: compare it with STDEV.S of the tests
+                c = ws.cell(r, 14, man_sd)
+                c.font, c.number_format = F_INPUT, fmt
+                c = ws.cell(r, 15, f"={q(sheet)}!$M${rr}")
+                c.font, c.number_format = F_LINK, fmt
+                ws.cell(r, 16, f'=IF(ISNUMBER(O{r}),IF(ABS(ROUND(O{r},H{r})-N{r})<10^-(H{r}+3),"일치","불일치"),"{DASH}")')
+                ws.cell(r, 16).alignment = Alignment(horizontal="center")
             for j in (5, 6, 7, 9, 10, 11):
                 ws.cell(r, j).font = F_BASE
             for j in (8, 9, 10, 13):
@@ -491,7 +503,9 @@ def write_comparison(wb, loc, manuscript, n_tests):
     ]
     for i, text in enumerate(notes):
         ws.cell(r + i, 1, text).font = F_NOTE
-    for col, w in zip("ABCDEFGHIJKLM", [10, 7, 13, 15, 14, 13, 10, 9, 10, 10, 58, 58, 5]):
+    ws.conditional_formatting.add(f"P{first}:P{last}", CellIsRule(operator="equal", formula=['"불일치"'],
+                                                                  fill=FILL_FLAG, font=F_RED))
+    for col, w in zip("ABCDEFGHIJKLMNOP", [10, 7, 13, 15, 14, 13, 10, 9, 10, 10, 58, 58, 5, 11, 12, 11]):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "C4"
 
