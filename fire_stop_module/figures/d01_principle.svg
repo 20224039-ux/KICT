@@ -1,0 +1,42 @@
+<svg class="dwg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 410" width="920" height="410" role="img" aria-label="원리 비교: 모듈을 기존 외부강판 바깥에 덧대면 상부 겹침이 물 흐름과 반대가 되어 실리콘이 유일한 방수선이 되고, 상부는 기존 강판 뒤로 넣고 하부는 기존 강판 위로 덮으면 모든 겹침이 위가 아래를 덮어 실링 없이 배수된다"><style>svg.dwg{--sheet:#ffffff;--ink:#1d2329;--muted:#5f6973;--rule:#d6dbe1;--new:#c4511a;--new-tint:#fbe6da;--water:#1769c2;--bad:#b0124a;--ok:#2f7d4f;--core:#ece6d3;--core-dot:#b3a77f}@media (prefers-color-scheme:dark){svg.dwg{--sheet:#1b1f25;--ink:#e4e8ec;--muted:#9aa4ae;--rule:#333a43;--new:#f08043;--new-tint:#46281a;--water:#5aa9f6;--bad:#f0679a;--ok:#62c48e;--core:#343128;--core-dot:#71684f}}
+.dwg{font-family:var(--f-body,'IBM Plex Sans KR','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif)}
+.dwg .bg{fill:var(--sheet)}
+.dwg .fl{stroke:none}
+.dwg .sk{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:square}
+.dwg .gt{fill:none;stroke:var(--muted);stroke-width:3}
+.dwg .nw{fill:none;stroke:var(--new);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.dwg .nw2{fill:none;stroke:var(--new);stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.dwg .pc-bg{fill:var(--core)}
+.dwg .pc-dot{fill:var(--core-dot)}
+.dwg .pm-bg{fill:var(--new-tint)}
+.dwg .pm-ln{fill:none;stroke:var(--new);stroke-width:.7;opacity:.7}
+.dwg .ps-bg{fill:var(--sheet)}
+.dwg .ps-ln{fill:none;stroke:var(--new);stroke-width:.6;opacity:.55}
+.dwg .void{fill:var(--sheet);stroke:var(--muted);stroke-width:.8;stroke-dasharray:3 2}
+.dwg .brk{fill:none;stroke:var(--muted);stroke-width:1}
+.dwg .wt{fill:none;stroke:var(--water);stroke-width:1.6;stroke-dasharray:5 3}
+.dwg .wt2{fill:none;stroke:var(--water);stroke-width:1.2;stroke-dasharray:3 2}
+.dwg .lk{fill:none;stroke:var(--bad);stroke-width:1.6;stroke-dasharray:5 3}
+.dwg .mv{fill:none;stroke:var(--ink);stroke-width:1.5}
+.dwg .mk-w{fill:var(--water)}
+.dwg .mk-k{fill:var(--ink)}
+.dwg .mk-b{fill:var(--bad)}
+.dwg .dm{fill:none;stroke:var(--muted);stroke-width:.8}
+.dwg .dx{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.dwg .tx{fill:var(--ink);font-size:12px}
+.dwg .ts{fill:var(--muted);font-size:11px}
+.dwg .th{fill:var(--ink);font-size:13.5px;font-weight:700}
+.dwg .tw{fill:var(--water);font-size:11.5px}
+.dwg .tn{fill:var(--new);font-size:12px;font-weight:600}
+.dwg .tb{fill:var(--bad);font-size:12px;font-weight:600}
+.dwg .tk{fill:var(--ok);font-size:12px;font-weight:600}
+.dwg .halo{paint-order:stroke;stroke:var(--sheet);stroke-width:3.5px;stroke-linejoin:round}
+.dwg .bc{fill:var(--sheet);stroke:var(--new);stroke-width:1.2}
+.dwg .bn{fill:var(--new);font-family:var(--f-mono,'IBM Plex Mono',ui-monospace,Menlo,monospace);font-size:10.5px;font-weight:600}
+.dwg .ld{fill:none;stroke:var(--muted);stroke-width:.7}
+.dwg .ldd{fill:var(--muted)}
+.dwg .sc{fill:none;stroke:var(--ink);stroke-width:1.8}
+.dwg .sl{fill:var(--bad)}
+.dwg .hl{fill:none;stroke:var(--new);stroke-width:1.1;stroke-dasharray:2.5 2}
+.dwg .jt{fill:none;stroke:var(--muted);stroke-width:.9;stroke-dasharray:3 2}
+</style><defs><pattern id="d01-core" width="7" height="7" patternUnits="userSpaceOnUse"><rect class="pc-bg" width="7" height="7"/><circle class="pc-dot" cx="1.75" cy="1.75" r=".8"/><circle class="pc-dot" cx="5.25" cy="5.25" r=".8"/></pattern><pattern id="d01-mw" width="10" height="7" patternUnits="userSpaceOnUse"><rect class="pm-bg" width="10" height="7"/><polyline class="pm-ln" points="0,3.5 2.5,1 5,3.5 7.5,6 10,3.5"/></pattern><pattern id="d01-ms" width="12" height="9" patternUnits="userSpaceOnUse"><rect class="ps-bg" width="12" height="9"/><polyline class="ps-ln" points="0,4.5 3,1.5 6,4.5 9,7.5 12,4.5"/></pattern><marker id="d01-aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-w" d="M0,0 L10,5 L0,10 z"/></marker><marker id="d01-ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-k" d="M0,0 L10,5 L0,10 z"/></marker><marker id="d01-ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-b" d="M0,0 L10,5 L0,10 z"/></marker></defs><rect class="bg" width="920" height="410"/><text class="th" x="36.0" y="28.0" text-anchor="start">기존 방식 · 바깥에 덧댐</text><text class="tb" x="36.0" y="48.0" text-anchor="start">상부 겹침이 물 흐름과 반대 → 실리콘이 유일한 방수선</text><polygon class="fl" points="235.0,72.0 395.0,72.0 395.0,160.0 235.0,160.0" fill="url(#d01-core)"/><polygon class="fl" points="235.0,315.0 395.0,315.0 395.0,385.0 235.0,385.0" fill="url(#d01-core)"/><polygon class="fl" points="227.0,313.0 394.2,313.0 394.2,161.0 227.0,161.0" fill="url(#d01-mw)"/><polyline class="sk" points="235.0,160.0 235.0,72.0"/><polyline class="sk" points="235.0,385.0 235.0,315.0"/><polyline class="sk" points="395.0,385.0 395.0,72.0"/><polyline class="brk" points="220.6,72.0 305.4,72.0 310.2,60.0 319.8,84.0 324.6,72.0 409.4,72.0"/><polyline class="brk" points="220.6,385.0 305.4,385.0 310.2,373.0 319.8,397.0 324.6,385.0 409.4,385.0"/><polyline class="nw" points="233.4,110.0 225.4,110.0 225.4,355.0 217.4,362.0"/><polygon class="sl" points="224.6,110.0 234.2,110.0 234.2,90.0"/><polyline class="wt" points="230.2,74.0 230.2,104.0" marker-end="url(#d01-aw)"/><polyline class="lk" points="230.2,114.0 230.2,146.0 257.4,174.0 292.6,205.0" marker-end="url(#d01-ab)"/><polyline class="wt" points="217.4,120.0 217.4,351.0 209.4,361.0" marker-end="url(#d01-aw)"/><rect class="bg" x="203.0" y="225.0" width="211.2" height="30.0"/><polyline class="brk" points="203.0,227.0 301.6,227.0 305.6,221.0 311.6,233.0 315.6,227.0 414.2,227.0"/><polyline class="brk" points="203.0,253.0 301.6,253.0 305.6,247.0 311.6,259.0 315.6,253.0 414.2,253.0"/><text class="tx" x="196.6" y="84.0" text-anchor="end">기존 외부강판(상부)</text><text class="tb" x="196.6" y="106.0" text-anchor="end">실리콘 (시간이 지나면 열화)</text><text class="tx" x="196.6" y="180.0" text-anchor="end">모듈 전면판</text><text class="ts" x="196.6" y="198.0" text-anchor="end">기존 강판 바깥에 덧댐</text><text class="tx" x="196.6" y="341.0" text-anchor="end">기존 외부강판(하부)</text><text class="tb" x="407.8" y="190.0" text-anchor="start">누수 → 내부로</text><text class="th" x="501.0" y="28.0" text-anchor="start">제안 · 위는 안쪽, 아래는 바깥</text><text class="tk" x="501.0" y="48.0" text-anchor="start">위가 아래를 덮는 겹침 → 실링 없이 중력 배수</text><polygon class="fl" points="700.0,72.0 860.0,72.0 860.0,160.0 716.0,160.0 716.0,72.0 700.0,72.0" fill="url(#d01-core)"/><polygon class="fl" points="700.0,315.0 860.0,315.0 860.0,385.0 700.0,385.0" fill="url(#d01-core)"/><polygon class="void" points="700.0,160.0 716.0,160.0 716.0,72.0 700.0,72.0"/><polygon class="fl" points="695.2,313.0 859.2,313.0 859.2,161.0 708.8,161.0 708.8,175.0 695.2,190.0" fill="url(#d01-mw)"/><polyline class="sk" points="700.0,160.0 700.0,72.0"/><polyline class="sk" points="700.0,385.0 700.0,315.0"/><polyline class="sk" points="860.0,385.0 860.0,72.0"/><polyline class="brk" points="685.6,72.0 770.4,72.0 775.2,60.0 784.8,84.0 789.6,72.0 874.4,72.0"/><polyline class="brk" points="685.6,385.0 770.4,385.0 775.2,373.0 784.8,397.0 789.6,385.0 874.4,385.0"/><polyline class="nw" points="713.6,100.0 713.6,90.0 707.2,90.0 707.2,175.0 692.8,190.0 692.8,355.0 684.0,362.0"/><polyline class="wt" points="684.0,74.0 684.0,353.0 674.4,365.0" marker-end="url(#d01-aw)"/><rect class="bg" x="668.0" y="225.0" width="211.2" height="30.0"/><polyline class="brk" points="668.0,227.0 766.6,227.0 770.6,221.0 776.6,233.0 780.6,227.0 879.2,227.0"/><polyline class="brk" points="668.0,253.0 766.6,253.0 770.6,247.0 776.6,259.0 780.6,253.0 879.2,253.0"/><text class="tx" x="661.6" y="84.0" text-anchor="end">기존 외부강판(상부)</text><text class="tn" x="661.6" y="120.0" text-anchor="end">텅: 기존 강판 뒤로 70</text><text class="tx" x="661.6" y="190.0" text-anchor="end">모듈 전면판</text><text class="tn" x="661.6" y="323.0" text-anchor="end">스커트: 기존 강판 위로</text><text class="tx" x="661.6" y="349.0" text-anchor="end">기존 외부강판(하부)</text></svg>

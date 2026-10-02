@@ -1,0 +1,42 @@
+<svg class="dwg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 440" width="920" height="440" role="img" aria-label="모듈 간 이음 수평 단면: 카세트 A의 전면판이 50 mm 연장되어 카세트 B의 전면판 뒤에 겹치고, 연장부의 배수 채널이 이음으로 들어온 물을 받아 아래 스타터레일로 보낸다. 미네랄울은 50 mm 단차로 맞물려 이음부에도 끊기지 않는다"><style>svg.dwg{--sheet:#ffffff;--ink:#1d2329;--muted:#5f6973;--rule:#d6dbe1;--new:#c4511a;--new-tint:#fbe6da;--water:#1769c2;--bad:#b0124a;--ok:#2f7d4f;--core:#ece6d3;--core-dot:#b3a77f}@media (prefers-color-scheme:dark){svg.dwg{--sheet:#1b1f25;--ink:#e4e8ec;--muted:#9aa4ae;--rule:#333a43;--new:#f08043;--new-tint:#46281a;--water:#5aa9f6;--bad:#f0679a;--ok:#62c48e;--core:#343128;--core-dot:#71684f}}
+.dwg{font-family:var(--f-body,'IBM Plex Sans KR','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif)}
+.dwg .bg{fill:var(--sheet)}
+.dwg .fl{stroke:none}
+.dwg .sk{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:square}
+.dwg .gt{fill:none;stroke:var(--muted);stroke-width:3}
+.dwg .nw{fill:none;stroke:var(--new);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.dwg .nw2{fill:none;stroke:var(--new);stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.dwg .pc-bg{fill:var(--core)}
+.dwg .pc-dot{fill:var(--core-dot)}
+.dwg .pm-bg{fill:var(--new-tint)}
+.dwg .pm-ln{fill:none;stroke:var(--new);stroke-width:.7;opacity:.7}
+.dwg .ps-bg{fill:var(--sheet)}
+.dwg .ps-ln{fill:none;stroke:var(--new);stroke-width:.6;opacity:.55}
+.dwg .void{fill:var(--sheet);stroke:var(--muted);stroke-width:.8;stroke-dasharray:3 2}
+.dwg .brk{fill:none;stroke:var(--muted);stroke-width:1}
+.dwg .wt{fill:none;stroke:var(--water);stroke-width:1.6;stroke-dasharray:5 3}
+.dwg .wt2{fill:none;stroke:var(--water);stroke-width:1.2;stroke-dasharray:3 2}
+.dwg .lk{fill:none;stroke:var(--bad);stroke-width:1.6;stroke-dasharray:5 3}
+.dwg .mv{fill:none;stroke:var(--ink);stroke-width:1.5}
+.dwg .mk-w{fill:var(--water)}
+.dwg .mk-k{fill:var(--ink)}
+.dwg .mk-b{fill:var(--bad)}
+.dwg .dm{fill:none;stroke:var(--muted);stroke-width:.8}
+.dwg .dx{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.dwg .tx{fill:var(--ink);font-size:12px}
+.dwg .ts{fill:var(--muted);font-size:11px}
+.dwg .th{fill:var(--ink);font-size:13.5px;font-weight:700}
+.dwg .tw{fill:var(--water);font-size:11.5px}
+.dwg .tn{fill:var(--new);font-size:12px;font-weight:600}
+.dwg .tb{fill:var(--bad);font-size:12px;font-weight:600}
+.dwg .tk{fill:var(--ok);font-size:12px;font-weight:600}
+.dwg .halo{paint-order:stroke;stroke:var(--sheet);stroke-width:3.5px;stroke-linejoin:round}
+.dwg .bc{fill:var(--sheet);stroke:var(--new);stroke-width:1.2}
+.dwg .bn{fill:var(--new);font-family:var(--f-mono,'IBM Plex Mono',ui-monospace,Menlo,monospace);font-size:10.5px;font-weight:600}
+.dwg .ld{fill:none;stroke:var(--muted);stroke-width:.7}
+.dwg .ldd{fill:var(--muted)}
+.dwg .sc{fill:none;stroke:var(--ink);stroke-width:1.8}
+.dwg .sl{fill:var(--bad)}
+.dwg .hl{fill:none;stroke:var(--new);stroke-width:1.1;stroke-dasharray:2.5 2}
+.dwg .jt{fill:none;stroke:var(--muted);stroke-width:.9;stroke-dasharray:3 2}
+</style><defs><pattern id="d04-core" width="7" height="7" patternUnits="userSpaceOnUse"><rect class="pc-bg" width="7" height="7"/><circle class="pc-dot" cx="1.75" cy="1.75" r=".8"/><circle class="pc-dot" cx="5.25" cy="5.25" r=".8"/></pattern><pattern id="d04-mw" width="10" height="7" patternUnits="userSpaceOnUse"><rect class="pm-bg" width="10" height="7"/><polyline class="pm-ln" points="0,3.5 2.5,1 5,3.5 7.5,6 10,3.5"/></pattern><pattern id="d04-ms" width="12" height="9" patternUnits="userSpaceOnUse"><rect class="ps-bg" width="12" height="9"/><polyline class="ps-ln" points="0,4.5 3,1.5 6,4.5 9,7.5 12,4.5"/></pattern><marker id="d04-aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-w" d="M0,0 L10,5 L0,10 z"/></marker><marker id="d04-ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-k" d="M0,0 L10,5 L0,10 z"/></marker><marker id="d04-ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-b" d="M0,0 L10,5 L0,10 z"/></marker></defs><rect class="bg" width="920" height="440"/><polygon class="fl" points="54.0,102.9 460.0,102.9 460.0,236.8 530.0,236.8 530.0,370.7 54.0,370.7" fill="url(#d04-mw)"/><polygon class="fl" points="460.0,140.6 530.0,140.6 530.0,102.9 866.0,102.9 866.0,370.7 530.0,370.7 530.0,236.8 460.0,236.8" fill="url(#d04-mw)"/><polyline class="jt" points="460.0,102.9 460.0,236.8 530.0,236.8 530.0,370.7"/><polyline class="sk" points="54.0,372.0 866.0,372.0"/><polyline class="nw" points="54.0,100.3 454.4,100.3 460.0,105.5 486.6,105.5 486.6,132.8 503.4,132.8 503.4,105.5 530.0,105.5 530.0,119.8"/><polyline class="nw" points="460.0,100.3 866.0,100.3"/><polyline class="brk" points="54.0,90.0 54.0,392.0"/><polyline class="brk" points="866.0,90.0 866.0,392.0"/><polyline class="wt" points="362.0,34.0 451.6,88.6 471.2,101.6 495.0,122.4" marker-end="url(#d04-aw)"/><text class="tw" x="359.2" y="26.2" text-anchor="end">바람에 밀린 빗물</text><polyline class="ld" points="503.4,132.8 549.6,80.8"/><text class="tw" x="552.4" y="84.8" text-anchor="start">배수 채널 12×10 → 아래 스타터레일로</text><polyline class="dm" points="460.0,96.4 460.0,41.8"/><polyline class="dm" points="530.0,104.2 530.0,41.8"/><polyline class="dm" points="460.0,49.6 530.0,49.6"/><polyline class="dm" points="456.5,53.1 463.5,46.1"/><polyline class="dm" points="526.5,53.1 533.5,46.1"/><text class="dx" x="495.0" y="44.6" text-anchor="middle">겹침 50</text><text class="th halo" x="250.0" y="247.2" text-anchor="middle">카세트 A</text><text class="th halo" x="705.0" y="247.2" text-anchor="middle">카세트 B</text><polyline class="ld" points="530.0,304.4 574.8,304.4"/><text class="tn halo" x="577.6" y="299.2" text-anchor="start">미네랄울 50 단차 겹침</text><text class="tx halo" x="577.6" y="316.2" text-anchor="start">이음부에도 불연재가 이어짐</text><text class="ts" x="62.4" y="34.0" text-anchor="start">실외</text><text class="ts" x="62.4" y="418.8" text-anchor="start">실내</text><text class="ts" x="857.6" y="405.8" text-anchor="end">기존 내부강판</text><text class="ts" x="250.0" y="88.6" text-anchor="middle">전면판 (길이 1,000)</text></svg>

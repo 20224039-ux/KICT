@@ -1,0 +1,208 @@
+<title>화재확산방지 모듈 상세</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a drawing set — one reading column, each figure is a sheet with a title block (drawing no. · title · scale). */
+:root{
+  --paper:#eceff2; --sheet:#ffffff; --ink:#1d2329; --muted:#5f6973; --rule:#d6dbe1;
+  --new:#c4511a; --new-tint:#fbe6da; --water:#1769c2; --bad:#b0124a; --ok:#2f7d4f;
+  --core:#ece6d3; --core-dot:#b3a77f;
+  --f-body:'IBM Plex Sans KR','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#121519; --sheet:#1b1f25; --ink:#e4e8ec; --muted:#9aa4ae; --rule:#333a43;
+    --new:#f08043; --new-tint:#46281a; --water:#5aa9f6; --bad:#f0679a; --ok:#62c48e;
+    --core:#343128; --core-dot:#71684f; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121519; --sheet:#1b1f25; --ink:#e4e8ec; --muted:#9aa4ae; --rule:#333a43;
+  --new:#f08043; --new-tint:#46281a; --water:#5aa9f6; --bad:#f0679a; --ok:#62c48e;
+  --core:#343128; --core-dot:#71684f; color-scheme:dark;
+}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.7 var(--f-body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding-inline:16px;padding-block:40px 72px;display:flex;flex-direction:column;gap:44px}
+header{display:flex;flex-direction:column;gap:14px}
+.eyebrow{font:500 13px/1.4 var(--f-body);letter-spacing:.03em;color:var(--muted)}
+h1{font-size:clamp(26px,4.2vw,36px);line-height:1.25;font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:21px;line-height:1.35;margin:0;font-weight:700;text-wrap:balance}
+h3{font-size:16px;margin:0;font-weight:600}
+p{margin:0;max-width:68ch}
+.lead{font-size:16.5px;color:var(--ink);max-width:70ch}
+section{display:flex;flex-direction:column;gap:16px}
+.sec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sec-head .no{font:600 12.5px var(--f-mono);color:var(--new);letter-spacing:.04em}
+.sec-head .no.kr{font-family:var(--f-body)}
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.keys > div{background:var(--sheet);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.keys .k{font:600 13px var(--f-body);color:var(--new);letter-spacing:.04em}
+.keys b{font-size:15.5px}
+.keys span{font-size:14px;color:var(--muted);line-height:1.6}
+figure{margin:0;background:var(--sheet);border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.dwg-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dwg-scroll svg{display:block;width:100%;height:auto;min-width:680px}
+.tblock{display:grid;grid-template-columns:auto 1fr auto;border-top:1px solid var(--rule);font-size:13px}
+.tblock > *{padding:9px 14px;border-right:1px solid var(--rule);min-width:0}
+.tblock > *:last-child{border-right:0}
+.tblock .dno{font:600 12.5px var(--f-mono);color:var(--new)}
+.tblock .sc{font:500 12px var(--f-mono);color:var(--muted);white-space:nowrap}
+figcaption{padding:12px 14px 14px;border-top:1px solid var(--rule);font-size:14px;color:var(--muted);line-height:1.65}
+figcaption b{color:var(--ink);font-weight:600}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:4px;background:var(--sheet)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--rule)}
+thead th{font-size:12.5px;font-weight:600;color:var(--muted);background:var(--paper)}
+tbody tr:last-child td{border-bottom:0}
+td.n{font:600 12.5px var(--f-mono);color:var(--new);width:34px;text-align:center}
+td.m{font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+tr.pick td{background:color-mix(in srgb,var(--new) 7%,var(--sheet))}
+ol,ul{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px;max-width:72ch}
+li::marker{color:var(--muted);font-family:var(--f-mono);font-size:13px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+.two > div{display:flex;flex-direction:column;gap:10px;min-width:0}
+.note{font-size:13.5px;color:var(--muted);border-top:1px solid var(--rule);padding-top:14px;max-width:none}
+.tag{display:inline-block;font:600 11.5px var(--f-mono);padding:1px 7px;border-radius:3px;background:var(--new);color:var(--sheet);vertical-align:2px;margin-left:6px}
+code{font-family:var(--f-mono);font-size:.9em}
+@media (max-width:720px){
+  .keys{grid-template-columns:1fr}
+  .two{grid-template-columns:1fr}
+  .wrap{gap:36px;padding-block:28px 56px}
+}
+/*SVG-RULES*/
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">기존 샌드위치패널 외벽 · 화재확산방지 밴드 · 상세 아이디어</div>
+  <h1>외부강판 안쪽으로 끼우는 걸이식 화재확산방지 카세트</h1>
+  <p class="lead">외부강판과 단열재를 띠 모양으로 걷어낸 자리에 미네랄울 카세트를 넣되, <b>위쪽은 남아 있는 외부강판 뒤로 밀어 넣고 아래쪽은 기존 외부강판 위를 덮게</b> 하는 안입니다. 겹침이 모두 기와처럼 위가 아래를 덮기 때문에 실리콘 없이 빗물이 중력으로 밖으로 빠집니다.</p>
+  <div class="keys">
+    <div><span class="k">상부</span><b>텅 70 mm를 기존 강판 뒤 포켓에</b><span>상부 강판 뒤 단열재만 깊이 10 × 높이 100 걷어 내고 카세트 전면판 연장부(텅)를 끼웁니다.</span></div>
+    <div><span class="k">하부</span><b>스커트 40 mm + 스타터레일 50 mm</b><span>스타터레일이 하부 단열재 절단면과 강판 끝을 덮고, 카세트 스커트가 그 바깥을 다시 덮습니다.</span></div>
+    <div><span class="k">체결</span><b>레일 두 줄에 걸기만, 노출 피스 0</b><span>레일만 레이저로 수평을 잡아 고정하면 카세트는 들고–밀고–내려 걸면 끝납니다.</span></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><span class="no">D-01</span><h2>겹치는 방향을 물 흐름에 맞춘다</h2></div>
+  <figure>
+    <div class="dwg-scroll"><!--D01--></div>
+    <div class="tblock"><span class="dno">D-01</span><span>원리 비교 · 수직 단면</span><span class="sc">NTS · mm</span></div>
+    <figcaption>왼쪽처럼 모듈을 기존 강판 <b>바깥</b>에 덧대면 상부 이음은 물이 흘러 들어가는 방향으로 열립니다. 이때 막아 주는 것은 실리콘뿐이라 실리콘이 삭으면 바로 샙니다. 오른쪽처럼 상부는 기존 강판 <b>뒤</b>로, 하부는 기존 강판 <b>위</b>로 겹치면 어느 이음에서도 물이 바깥쪽 판을 타고 흘러내립니다.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">D-02</span><h2>추천안 수직 단면 상세</h2></div>
+  <figure>
+    <div class="dwg-scroll"><!--D02--></div>
+    <div class="tblock"><span class="dno">D-02</span><span>걸이식 일체 카세트 · 수직 단면 (코어 두께 100 예시)</span><span class="sc">NTS · mm · 판 두께·틈 과장</span></div>
+    <figcaption>바람에 밀려 상부 겹침으로 올라간 물(가는 파선)은 <b>텅 70 + 백댐 헴</b>에서 멈추고 텅 바깥면을 따라 조글로 흘러나옵니다. 세로 이음으로 들어간 물은 스타터레일 선반에 떨어진 뒤 리브의 배수 노치를 지나 스커트 아래로 빠집니다. 미네랄울은 외부강판 면부터 내부강판까지 <b>t + 10 mm로 압축해 끼워</b> 틈 없이 채웁니다. 이 저장소의 중공층(PIR) 시험에서 연소대가 약 2.3 mm/s로 일정하게 올라간 것처럼, 화염은 코어나 틈을 따라 위로 번지므로 밴드는 전 깊이를 끊어야 합니다.</figcaption>
+  </figure>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>번호</th><th>부재</th><th>추천 사양</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td class="n">1</td><td>기존 외부강판(상부)</td><td>절단 끝단 징크리치(아연말) 방청</td><td>텅 위를 덮는 상부 겹침</td></tr>
+        <tr><td class="n">2</td><td>텅 + 백댐 헴</td><td>전면판 연장 70, 상단 안쪽으로 접어 헴</td><td>기존 강판 뒤 70 겹침, 역류수 차단, 삽입 시 날 끝 보호</td></tr>
+        <tr><td class="n">3</td><td>45° 조글</td><td>바깥으로 약 6 오프셋, 상부 강판 끝에서 15 아래(들임줄눈)</td><td>강판 끝에서 떨어지는 물을 바깥으로 보내고, 들어올릴 때 강판 끝에 걸리지 않음</td></tr>
+        <tr><td class="n">4</td><td>카세트 전면판</td><td>0.8t 도장용융아연도금강판(기존 패널 색), 길이 1,000</td><td>노출면, 텅·조글·스커트 일체 프로파일</td></tr>
+        <tr><td class="n">5</td><td>스커트 + 물끊기</td><td>스타터레일 바깥 40 겹침, 끝단 바깥 킥아웃</td><td>하부 겹침, 모세관 차단</td></tr>
+        <tr><td class="n">6</td><td>기존 외부강판(하부)</td><td>절단 끝단은 스타터레일 선반이 덮음</td><td>—</td></tr>
+        <tr><td class="n">7</td><td>상부 포켓</td><td>상부 강판 뒤 단열재만 깊이 10 × 높이 100 제거</td><td>텅 70 + 들어올림 12 + 시공 여유 18</td></tr>
+        <tr><td class="n">8</td><td>압축 미네랄울 스트립</td><td>저밀도 40t → 설치 후 30으로 눌림</td><td>들어올림 여유를 흡수하고 상부 틈을 채움 (400 산정에서 제외)</td></tr>
+        <tr><td class="n">9</td><td>상부판 + 테일</td><td>0.6t GI, 테일 18</td><td>상부 단열재 절단면 덮개, 걸이레일에 걸림</td></tr>
+        <tr><td class="n">10</td><td>상부 걸이레일</td><td>1.0t STS304 채널, 내부강판에 피스 @150</td><td>카세트 상부 고정 (풍압 부압)</td></tr>
+        <tr><td class="n">11</td><td>미네랄울</td><td>KS L 9102 미네랄울 보온판 2호 이상, 두께 t + 10, 높이 418</td><td>전 깊이 밀실 충전 (화재확산 차단)</td></tr>
+        <tr><td class="n">12</td><td>기존 내부강판</td><td>그대로 둠 (절단 깊이 스톱으로 보호)</td><td>배면 경계</td></tr>
+        <tr><td class="n">13</td><td>하부판 + 걸림 리브</td><td>0.6t GI, 아래로 접은 리브 10</td><td>레일 리브 위에 얹혀 하중을 전달하고, 리브 뒤에 걸려 바깥으로 빠지지 않음</td></tr>
+        <tr><td class="n">14</td><td>스타터레일</td><td>1.0t STS304, 길이 3,000, 배수 노치 @150</td><td>하부 절단면 덮개, 수평 기준, 물끊기</td></tr>
+        <tr><td class="n">15</td><td>기존 띠장 + 피스</td><td>⌀5.5 셀프드릴링 @300 (내부강판 관통)</td><td>카세트 하중을 구조체로 전달</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">D-03</span><h2>설치는 세 동작: 들고, 밀고, 내린다</h2></div>
+  <figure>
+    <div class="dwg-scroll"><!--D03--></div>
+    <div class="tblock"><span class="dno">D-03</span><span>카세트 설치 동작 · 수직 단면</span><span class="sc">NTS · mm</span></div>
+    <figcaption>걸림 깊이는 상·하부 모두 8 mm, 들어올림은 12 mm라서 4 mm 여유를 두고 리브를 넘어갑니다. 들어올릴 때 압축 스트립이 30 → 18 mm로 눌렸다가, 내려놓으면 다시 30 mm로 상부 단열재 절단면에 밀착합니다.</figcaption>
+  </figure>
+  <div class="two">
+    <div>
+      <h3>시공 순서</h3>
+      <ol>
+        <li>밴드 높이를 정합니다. 세로 패널이면 띠장이 밴드 하단에 오도록 맞추고, 상·하 절단선(간격 460)을 레이저로 먹매김합니다.</li>
+        <li>외부강판을 니블러나 전단기로 자릅니다. 그라인더처럼 불티가 나는 공구는 쓰지 않고 화재감시자를 둡니다.</li>
+        <li>단열재를 내부강판까지 걷어 냅니다. 깊이 스톱이 달린 톱으로 내부강판에는 칼날이 닿지 않게 합니다.</li>
+        <li>상부 강판 뒤에 포켓(깊이 10 × 높이 100)을 멀티커터와 깊이 가이드로 냅니다.</li>
+        <li>강판 절단 끝단을 징크리치 도료로 방청합니다.</li>
+        <li>스타터레일(띠장에 @300)과 상부 걸이레일(@150)을 레이저 한 번 세팅으로 고정합니다.</li>
+        <li>카세트를 들고–밀고–내려 겁니다. 세로 이음의 겹침 방향은 한쪽으로 통일합니다.</li>
+        <li>코너 카세트, 구간 끝 조정 카세트, 엔드캡으로 마감합니다. 당일 연 구간은 당일 닫습니다.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>왜 빠른가</h3>
+      <ul>
+        <li><b>전면판 프로파일 1종.</b> 텅·조글·스커트는 패널 두께와 무관해서 롤포밍 1라인으로 모든 현장에 씁니다. 두께에 따라 바뀌는 것은 상·하부판 폭과 미네랄울 두께뿐입니다.</li>
+        <li><b>정밀 작업은 레일 두 줄에만.</b> 수평과 직선은 레일이 정하고, 카세트는 공구 없이 걸기만 합니다.</li>
+        <li><b>실링과 노출 피스가 없습니다.</b> 양생을 기다릴 일도, 몇 년마다 다시 실링할 일도 없습니다.</li>
+        <li><b>1,000 mm 카세트 약 10 kg</b>(미네랄울 120 kg/m³ 기준)이라 한 사람이 다룹니다. 직선 구간은 2,000 mm(2인)도 됩니다.</li>
+        <li><b>절단 지그.</b> 460 간격 트윈 가이드레일 + 깊이 스톱으로 개구 높이를 +10/−0 mm 안에 맞춥니다.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">D-04</span><h2>카세트끼리 잇는 방법</h2></div>
+  <figure>
+    <div class="dwg-scroll"><!--D04--></div>
+    <div class="tblock"><span class="dno">D-04</span><span>카세트 세로 이음 · 수평 단면 (밴드 중간 높이)</span><span class="sc">NTS · mm</span></div>
+    <figcaption>카세트 A의 전면판은 끝에서 50 mm 더 나와 있고 조글로 판 두께만큼 들어가 있어, B의 전면판이 덮어도 면이 맞습니다. 겹침 틈으로 들어온 물은 연장부의 <b>배수 채널</b>이 받아 아래 스타터레일 선반으로 흘려보냅니다. 미네랄울은 앞뒤 절반씩 50 mm 단차로 맞물리므로 이음을 곧게 관통하는 틈이 생기지 않습니다.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">D-05</span><h2>다른 두 가지 방식과 비교</h2></div>
+  <figure>
+    <div class="dwg-scroll"><!--D05--></div>
+    <div class="tblock"><span class="dno">D-05</span><span>대안 3안 · 수직 단면</span><span class="sc">NTS · mm</span></div>
+    <figcaption>세 안 모두 상부는 기존 강판 뒤, 하부는 기존 강판 위로 겹치는 원리는 같습니다. 차이는 공장에서 얼마나 조립해 오느냐와 무엇으로 고정하느냐입니다.</figcaption>
+  </figure>
+  <div class="tbl">
+    <table>
+      <thead><tr><th></th><th>A안 · 걸이식 일체 카세트<span class="tag">추천</span></th><th>B안 · 3부재 분리형</th><th>C안 · 기성 불연패널 스트립</th></tr></thead>
+      <tbody>
+        <tr><td>현장 부재</td><td>레일 2종 + 카세트</td><td>레일 2종 + 미네랄울 인서트 + 커버</td><td>스트립 + 상·하부 플래싱</td></tr>
+        <tr><td>노출 체결</td><td>없음</td><td>커버 하단 리벳</td><td>관통 피스(EPDM 와셔) + 리벳</td></tr>
+        <tr><td>패널 두께 대응</td><td>두께별 카세트 (전면판은 공용)</td><td>미네랄울만 두께별, 커버 공용</td><td>기성 패널 두께와 맞을 때만</td></tr>
+        <tr><td>시공 오차 흡수</td><td>포켓 여유 18, 텅 겹침 ±10</td><td>가장 큼 (인서트를 현장에서 맞춤)</td><td>작음 (현장 재단)</td></tr>
+        <tr><td>공장 준비</td><td>롤포밍·절곡 + 조립 지그</td><td>절곡만</td><td>거의 없음</td></tr>
+        <tr><td>현장 속도</td><td>가장 빠름</td><td>보통</td><td>빠름</td></tr>
+        <tr><td>어울리는 경우</td><td>같은 두께가 길게 이어지는 공장 외벽</td><td>두께가 섞인 현장, 소량 시범 시공</td><td>금형 없이 바로 시범 적용할 때</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no kr">검토</span><h2>확정 전에 확인할 것</h2></div>
+  <ul>
+    <li><b>구조.</b> 세로로 설치된 패널에서 외부강판과 단열재를 끊으면, 그 높이에서는 샌드위치 단면의 휨저항이 없어지고 내부강판만 남습니다. 그래서 밴드는 띠장 높이에 맞추고, 상·하부 패널 끝이 띠장과 카세트로 지지되는지 풍하중으로 검토해야 합니다. 가로 패널이면 밴드를 패널 이음 높이에 맞추고, 남는 패널 폭의 휨 내력을 확인합니다.</li>
+    <li><b>상부 고정.</b> 포켓 앞의 외부강판(0.5t, 100 mm 자유단)으로는 부압에 버틸 수 없습니다. 상부 걸이레일이 그 역할을 하며, 내부강판 피스의 인발 내력을 확인하고 필요하면 실내 쪽에 보강 띠장을 덧댑니다.</li>
+    <li><b>법적 인정.</b> 「건축물의 피난·방화구조 등의 기준에 관한 규칙」 별표 3의 재료 기준(미네랄울 보온판 2호 이상, 매 층 높이 400 mm 이상 밀실 충전)으로 갈지, KS F 2257-8 시험으로 갈지 정해야 합니다. 압축 스트립은 400 mm 산정에서 뺐습니다. 조문과 KS 호수는 최신 원문으로 다시 확인해 주십시오.</li>
+    <li><b>열교와 결로.</b> 상부판·하부판·레일이 깊이 방향으로 이어져 선형 열교가 생깁니다. 레일은 STS로 하고, 필요하면 레일 뒤에 열교 차단 패드를 넣은 뒤 결로를 검토합니다.</li>
+    <li><b>기존 패널 실측.</b> 코어 종류(EPS는 절단 때 녹고 분진이 많고, PIR은 단단함), 실제 두께, 내부강판 부식, 패널 방향을 확인해 카세트 두께 시리즈를 정합니다.</li>
+    <li><b>수밀 확인.</b> 텅 겹침 70과 백댐이 충분한지 풍압을 건 살수 시험으로 확인합니다. 바람이 센 곳이나 높은 위치는 겹침을 100으로 늘립니다.</li>
+  </ul>
+  <p class="note">가정: 세로로 설치된 샌드위치패널(강판 0.5 mm, 코어 두께 t = 50–200 mm, 도면은 100 mm), 띠장(C형강)이 밴드 하단에 위치. 치수는 아이디어 단계의 추천값이며 실측과 시험으로 확정합니다. 도면은 <code>fire_stop_module/build.py</code>로 다시 만들 수 있습니다.</p>
+</section>
+</div>
