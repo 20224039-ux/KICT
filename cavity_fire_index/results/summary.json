@@ -1,0 +1,1163 @@
+{
+ "definitions": {
+  "signal": "max of the three thermocouples per height; dT = T - T(t=0)",
+  "t_theta": "start of the first 30-s window with dT >= theta throughout (from ignition, t = 0)",
+  "alpha600": "600 K / t600^2  [K/s^2]  (NFPA-style: alpha = reference / t_g^2)",
+  "grades": {
+   "IV": "t600 <= 450 s (alpha >= 2.963e-03)",
+   "III": "t600 <= 900 s (alpha >= 7.407e-04)",
+   "II": "t600 <= 1800 s (alpha >= 1.852e-04)",
+   "I": "not reached within 1800 s"
+  },
+  "evaluation_window_s": 1800
+ },
+ "tests_in_index": [
+  "EPS_SC-1",
+  "EPS_SC-2",
+  "EPS_SC-3",
+  "PIR_SC-2",
+  "PF_out-1",
+  "PF_out-2",
+  "PF_in-1",
+  "PF_in-2"
+ ],
+ "short_records": [
+  "EPS_C-1",
+  "EPS_C-2"
+ ],
+ "excluded": [
+  "PF_out-0"
+ ],
+ "qa": {
+  "splices": [
+   {
+    "a": "EPS_C-2",
+    "b": "PF_out-1",
+    "shift": 0,
+    "rows": [
+     263,
+     1826
+    ],
+    "n_shared": 1564,
+    "victim": "EPS_C-2",
+    "donor": "PF_out-1",
+    "jump_victim": 3161.3,
+    "jump_donor": 15.1,
+    "typical_victim": 20.5
+   },
+   {
+    "a": "EPS_SC-1",
+    "b": "PF_out-2",
+    "shift": 0,
+    "rows": [
+     1807,
+     1826
+    ],
+    "n_shared": 20,
+    "victim": "EPS_SC-1",
+    "donor": "PF_out-2",
+    "jump_victim": 2828.4,
+    "jump_donor": 154.1,
+    "typical_victim": 14.2
+   },
+   {
+    "a": "EPS_SC-2",
+    "b": "PF_in-1",
+    "shift": -1,
+    "rows": [
+     1808,
+     1826
+    ],
+    "n_shared": 19,
+    "victim": "EPS_SC-2",
+    "donor": "PF_in-1",
+    "jump_victim": 2482.2,
+    "jump_donor": 141.4,
+    "typical_victim": 9.5
+   }
+  ],
+  "tests": {
+   "EPS_C-1": {
+    "source": "EPS.xlsx / (1) EPS_C",
+    "steps_ok": true,
+    "unit_switch": null,
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.992,
+      0.008
+     ],
+     [
+      0.0,
+      0.979,
+      0.021
+     ],
+     [
+      0.079,
+      0.846,
+      0.075
+     ],
+     [
+      0.199,
+      0.635,
+      0.166
+     ]
+    ],
+    "record_s": 240,
+    "used_s": 240,
+    "T0": [
+     24.3,
+     19.7,
+     19.3,
+     19.5,
+     19.8,
+     19.8
+    ],
+    "hot_start": false,
+    "in_index": false
+   },
+   "EPS_C-2": {
+    "source": "EPS.xlsx / (2) EPS_C",
+    "steps_ok": true,
+    "unit_switch": null,
+    "truncated_at_s": 263,
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.004,
+      0.981,
+      0.015
+     ],
+     [
+      0.0,
+      0.996,
+      0.004
+     ],
+     [
+      0.0,
+      0.989,
+      0.011
+     ],
+     [
+      0.0,
+      0.989,
+      0.011
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.015,
+      0.928,
+      0.057
+     ]
+    ],
+    "record_s": 262,
+    "used_s": 262,
+    "T0": [
+     19.6,
+     21.7,
+     21.4,
+     20.7,
+     21.1,
+     20.7
+    ],
+    "hot_start": false,
+    "in_index": false
+   },
+   "EPS_SC-1": {
+    "source": "EPS.xlsx / (1) EPS_SC",
+    "steps_ok": true,
+    "unit_switch": null,
+    "truncated_at_s": 1807,
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.999,
+      0.001
+     ],
+     [
+      0.001,
+      0.998,
+      0.001
+     ],
+     [
+      0.0,
+      0.88,
+      0.12
+     ],
+     [
+      0.0,
+      0.849,
+      0.151
+     ]
+    ],
+    "record_s": 1806,
+    "used_s": 1800,
+    "T0": [
+     20.2,
+     19.7,
+     19.9,
+     19.6,
+     19.4,
+     19.8
+    ],
+    "hot_start": false,
+    "in_index": true
+   },
+   "EPS_SC-2": {
+    "source": "EPS.xlsx / (2) EPS_SC",
+    "steps_ok": true,
+    "unit_switch": null,
+    "truncated_at_s": 1808,
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.998,
+      0.002
+     ],
+     [
+      0.0,
+      0.996,
+      0.004
+     ]
+    ],
+    "record_s": 1807,
+    "used_s": 1800,
+    "T0": [
+     22.0,
+     20.6,
+     20.5,
+     20.4,
+     21.1,
+     21.9
+    ],
+    "hot_start": false,
+    "in_index": true
+   },
+   "EPS_SC-3": {
+    "source": "EPS.xlsx / (3) EPS_SC",
+    "steps_ok": true,
+    "unit_switch": "time column switches from minutes to seconds at row 1828",
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      0.973,
+      0.027
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.002,
+      0.998,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.998,
+      0.002
+     ]
+    ],
+    "record_s": 1866,
+    "used_s": 1800,
+    "T0": [
+     35.0,
+     30.1,
+     29.3,
+     28.2,
+     28.3,
+     28.8
+    ],
+    "hot_start": false,
+    "in_index": true
+   },
+   "PF_out-0": {
+    "source": "PF.xlsx / (0) PF_semi_out",
+    "steps_ok": true,
+    "unit_switch": null,
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.005,
+      0.995,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.924,
+      0.076
+     ]
+    ],
+    "record_s": 184,
+    "used_s": 184,
+    "T0": [
+     27.7,
+     25.3,
+     25.5,
+     25.5,
+     25.8,
+     26.1
+    ],
+    "hot_start": true,
+    "in_index": false
+   },
+   "PF_out-1": {
+    "source": "PF.xlsx / (1) PF_semi_out",
+    "steps_ok": true,
+    "unit_switch": null,
+    "fault_samples": {
+     "CH14": 36
+    },
+    "interpolated_gaps": {
+     "CH14": [
+      [
+       418,
+       453
+      ]
+     ]
+    },
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.001,
+      0.999,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.001,
+      0.999,
+      0.0
+     ],
+     [
+      0.0,
+      0.999,
+      0.001
+     ],
+     [
+      0.007,
+      0.993,
+      0.0
+     ]
+    ],
+    "record_s": 1826,
+    "used_s": 1800,
+    "T0": [
+     24.2,
+     24.3,
+     24.6,
+     24.6,
+     24.7,
+     24.7
+    ],
+    "hot_start": false,
+    "in_index": true
+   },
+   "PF_out-2": {
+    "source": "PF.xlsx / (2) PF_semi_out",
+    "steps_ok": true,
+    "unit_switch": null,
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.001,
+      0.999,
+      0.001
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.001,
+      0.998,
+      0.001
+     ],
+     [
+      0.031,
+      0.969,
+      0.0
+     ],
+     [
+      0.001,
+      0.999,
+      0.001
+     ]
+    ],
+    "record_s": 1826,
+    "used_s": 1800,
+    "T0": [
+     28.2,
+     21.7,
+     21.9,
+     22.0,
+     22.0,
+     22.2
+    ],
+    "hot_start": false,
+    "in_index": true
+   },
+   "PF_in-1": {
+    "source": "PF.xlsx / (1) PF_semi_in",
+    "steps_ok": true,
+    "unit_switch": null,
+    "fault_samples": {
+     "CH2": 167
+    },
+    "interpolated_gaps": {},
+    "unrecoverable": {
+     "CH2": 167
+    },
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      0.99,
+      0.01
+     ],
+     [
+      0.001,
+      0.999,
+      0.0
+     ],
+     [
+      0.002,
+      0.998,
+      0.0
+     ],
+     [
+      0.085,
+      0.915,
+      0.0
+     ],
+     [
+      0.122,
+      0.735,
+      0.143
+     ],
+     [
+      0.176,
+      0.588,
+      0.236
+     ]
+    ],
+    "record_s": 1826,
+    "used_s": 1800,
+    "T0": [
+     23.2,
+     23.5,
+     23.5,
+     23.8,
+     23.5,
+     23.8
+    ],
+    "hot_start": false,
+    "in_index": true
+   },
+   "PF_in-2": {
+    "source": "PF.xlsx / (2) PF_semi_in",
+    "steps_ok": true,
+    "unit_switch": null,
+    "fault_samples": {},
+    "interpolated_gaps": {},
+    "unrecoverable": {},
+    "share_hottest_channel_abc": [
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.739,
+      0.261
+     ],
+     [
+      0.0,
+      0.979,
+      0.021
+     ]
+    ],
+    "record_s": 1808,
+    "used_s": 1800,
+    "T0": [
+     25.3,
+     24.5,
+     24.1,
+     24.1,
+     24.4,
+     24.1
+    ],
+    "hot_start": false,
+    "in_index": true
+   },
+   "PIR_SC-2": {
+    "source": "PIR_SC_2_max.xlsx / sc_2 max",
+    "steps_ok": true,
+    "unit_switch": null,
+    "channels": "max per height only",
+    "record_s": 1832,
+    "used_s": 1800,
+    "T0": [
+     25.4,
+     23.6,
+     23.4,
+     23.5,
+     23.7,
+     24.6
+    ],
+    "hot_start": false,
+    "in_index": true
+   }
+  }
+ },
+ "index_3000mm": {
+  "EPS_C-1": {
+   "test": "EPS_C-1",
+   "material": "EPS_C",
+   "repeat": 1,
+   "record_s": 240,
+   "in_index": false,
+   "T0_C": 19.8,
+   "peak_C": 305.5,
+   "t_peak_s": 38.0,
+   "t300_s": null,
+   "t400_s": null,
+   "t500_s": null,
+   "t600_s": null,
+   "t700_s": null,
+   "t800_s": null,
+   "alpha600_K_s2": null,
+   "alpha500_K_s2": null,
+   "alpha_env_K_s2": null,
+   "grade": "n/a",
+   "rise_300_600_s": null,
+   "dur_600K_s": 0,
+   "n_tc_600_of_3": 0,
+   "excess_600K_Kmin": 0.0,
+   "exposure_Kmin": 457.088333,
+   "v_front_2000_3000_mm_s": null,
+   "front_simultaneous": false,
+   "early_max_dT_K": 285.7,
+   "early_mean_dT_60_120_K": 144.393443,
+   "cooling_event_s": 124.0
+  },
+  "EPS_C-2": {
+   "test": "EPS_C-2",
+   "material": "EPS_C",
+   "repeat": 2,
+   "record_s": 262,
+   "in_index": false,
+   "T0_C": 20.7,
+   "peak_C": 252.5,
+   "t_peak_s": 38.0,
+   "t300_s": null,
+   "t400_s": null,
+   "t500_s": null,
+   "t600_s": null,
+   "t700_s": null,
+   "t800_s": null,
+   "alpha600_K_s2": null,
+   "alpha500_K_s2": null,
+   "alpha_env_K_s2": null,
+   "grade": "n/a",
+   "rise_300_600_s": null,
+   "dur_600K_s": 0,
+   "n_tc_600_of_3": 0,
+   "excess_600K_Kmin": 0.0,
+   "exposure_Kmin": 444.583333,
+   "v_front_2000_3000_mm_s": null,
+   "front_simultaneous": false,
+   "early_max_dT_K": 231.8,
+   "early_mean_dT_60_120_K": 149.04918,
+   "cooling_event_s": 114.0
+  },
+  "EPS_SC-1": {
+   "test": "EPS_SC-1",
+   "material": "EPS_SC",
+   "repeat": 1,
+   "record_s": 1806,
+   "in_index": true,
+   "T0_C": 19.8,
+   "peak_C": 754.3,
+   "t_peak_s": 974.0,
+   "t300_s": 954.0,
+   "t400_s": 957.0,
+   "t500_s": 959.0,
+   "t600_s": 962.0,
+   "t700_s": null,
+   "t800_s": null,
+   "alpha600_K_s2": 0.000648,
+   "alpha500_K_s2": 0.000544,
+   "alpha_env_K_s2": 0.000687,
+   "grade": "II",
+   "rise_300_600_s": 8.0,
+   "dur_600K_s": 138,
+   "n_tc_600_of_3": 2,
+   "excess_600K_Kmin": 129.395,
+   "exposure_Kmin": 7066.211667,
+   "v_front_2000_3000_mm_s": null,
+   "front_simultaneous": true,
+   "early_max_dT_K": 217.3,
+   "early_mean_dT_60_120_K": 211.619672,
+   "cooling_event_s": 1191.0
+  },
+  "EPS_SC-2": {
+   "test": "EPS_SC-2",
+   "material": "EPS_SC",
+   "repeat": 2,
+   "record_s": 1807,
+   "in_index": true,
+   "T0_C": 21.9,
+   "peak_C": 430.6,
+   "t_peak_s": 1064.0,
+   "t300_s": 1035.0,
+   "t400_s": null,
+   "t500_s": null,
+   "t600_s": null,
+   "t700_s": null,
+   "t800_s": null,
+   "alpha600_K_s2": null,
+   "alpha500_K_s2": null,
+   "alpha_env_K_s2": null,
+   "grade": "I",
+   "rise_300_600_s": null,
+   "dur_600K_s": 0,
+   "n_tc_600_of_3": 0,
+   "excess_600K_Kmin": 0.0,
+   "exposure_Kmin": 4458.118333,
+   "v_front_2000_3000_mm_s": null,
+   "front_simultaneous": false,
+   "early_max_dT_K": 248.4,
+   "early_mean_dT_60_120_K": 225.629508,
+   "cooling_event_s": 1196.0
+  },
+  "EPS_SC-3": {
+   "test": "EPS_SC-3",
+   "material": "EPS_SC",
+   "repeat": 3,
+   "record_s": 1866,
+   "in_index": true,
+   "T0_C": 28.8,
+   "peak_C": 689.6,
+   "t_peak_s": 987.0,
+   "t300_s": 962.0,
+   "t400_s": 965.0,
+   "t500_s": 969.0,
+   "t600_s": 975.0,
+   "t700_s": null,
+   "t800_s": null,
+   "alpha600_K_s2": 0.000631,
+   "alpha500_K_s2": 0.000533,
+   "alpha_env_K_s2": 0.000604,
+   "grade": "II",
+   "rise_300_600_s": 13.0,
+   "dur_600K_s": 34,
+   "n_tc_600_of_3": 1,
+   "excess_600K_Kmin": 19.675,
+   "exposure_Kmin": 5979.916667,
+   "v_front_2000_3000_mm_s": null,
+   "front_simultaneous": true,
+   "early_max_dT_K": 286.2,
+   "early_mean_dT_60_120_K": 265.021311,
+   "cooling_event_s": null
+  },
+  "PIR_SC-2": {
+   "test": "PIR_SC-2",
+   "material": "PIR_SC",
+   "repeat": 2,
+   "record_s": 1832,
+   "in_index": true,
+   "T0_C": 24.6,
+   "peak_C": 1148.9,
+   "t_peak_s": 1286.0,
+   "t300_s": 665.0,
+   "t400_s": 742.0,
+   "t500_s": 754.0,
+   "t600_s": 1091.0,
+   "t700_s": 1143.0,
+   "t800_s": 1197.0,
+   "alpha600_K_s2": 0.000504,
+   "alpha500_K_s2": 0.000879,
+   "alpha_env_K_s2": 0.000653,
+   "grade": "II",
+   "rise_300_600_s": 426.0,
+   "dur_600K_s": 412,
+   "n_tc_600_of_3": null,
+   "excess_600K_Kmin": 1365.636667,
+   "exposure_Kmin": 12400.158333,
+   "v_front_2000_3000_mm_s": 2.386964,
+   "front_simultaneous": false,
+   "early_max_dT_K": 170.3,
+   "early_mean_dT_60_120_K": 156.531148,
+   "cooling_event_s": 1203.0
+  },
+  "PF_out-0": {
+   "test": "PF_out-0",
+   "material": "PF_out",
+   "repeat": 0,
+   "record_s": 184,
+   "in_index": false,
+   "T0_C": 26.1,
+   "peak_C": 1103.2,
+   "t_peak_s": 160.0,
+   "t300_s": 54.0,
+   "t400_s": 67.0,
+   "t500_s": 150.0,
+   "t600_s": null,
+   "t700_s": null,
+   "t800_s": null,
+   "alpha600_K_s2": null,
+   "alpha500_K_s2": 0.022222,
+   "alpha_env_K_s2": null,
+   "grade": "n/a",
+   "rise_300_600_s": null,
+   "dur_600K_s": 36,
+   "n_tc_600_of_3": 0,
+   "excess_600K_Kmin": 77.818333,
+   "exposure_Kmin": 1331.3,
+   "v_front_2000_3000_mm_s": null,
+   "front_simultaneous": false,
+   "early_max_dT_K": 627.1,
+   "early_mean_dT_60_120_K": 459.847541,
+   "cooling_event_s": 110.0
+  },
+  "PF_out-1": {
+   "test": "PF_out-1",
+   "material": "PF_out",
+   "repeat": 1,
+   "record_s": 1826,
+   "in_index": true,
+   "T0_C": 24.7,
+   "peak_C": 998.2,
+   "t_peak_s": 1309.0,
+   "t300_s": 931.0,
+   "t400_s": 974.0,
+   "t500_s": 1227.0,
+   "t600_s": 1245.0,
+   "t700_s": 1280.0,
+   "t800_s": 1291.0,
+   "alpha600_K_s2": 0.000387,
+   "alpha500_K_s2": 0.000332,
+   "alpha_env_K_s2": 0.000498,
+   "grade": "II",
+   "rise_300_600_s": 314.0,
+   "dur_600K_s": 173,
+   "n_tc_600_of_3": 1,
+   "excess_600K_Kmin": 474.618333,
+   "exposure_Kmin": 8816.925,
+   "v_front_2000_3000_mm_s": 2.135272,
+   "front_simultaneous": false,
+   "early_max_dT_K": 157.2,
+   "early_mean_dT_60_120_K": 143.960656,
+   "cooling_event_s": null
+  },
+  "PF_out-2": {
+   "test": "PF_out-2",
+   "material": "PF_out",
+   "repeat": 2,
+   "record_s": 1826,
+   "in_index": true,
+   "T0_C": 22.2,
+   "peak_C": 1161.6,
+   "t_peak_s": 1613.0,
+   "t300_s": 460.0,
+   "t400_s": 576.0,
+   "t500_s": 1439.0,
+   "t600_s": 1455.0,
+   "t700_s": 1478.0,
+   "t800_s": 1543.0,
+   "alpha600_K_s2": 0.000283,
+   "alpha500_K_s2": 0.000241,
+   "alpha_env_K_s2": 0.000384,
+   "grade": "II",
+   "rise_300_600_s": 995.0,
+   "dur_600K_s": 268,
+   "n_tc_600_of_3": 2,
+   "excess_600K_Kmin": 999.068333,
+   "exposure_Kmin": 11360.87,
+   "v_front_2000_3000_mm_s": 0.845161,
+   "front_simultaneous": false,
+   "early_max_dT_K": 242.1,
+   "early_mean_dT_60_120_K": 212.657377,
+   "cooling_event_s": null
+  },
+  "PF_in-1": {
+   "test": "PF_in-1",
+   "material": "PF_in",
+   "repeat": 1,
+   "record_s": 1826,
+   "in_index": true,
+   "T0_C": 23.8,
+   "peak_C": 1135.3,
+   "t_peak_s": 1008.0,
+   "t300_s": 338.0,
+   "t400_s": 440.0,
+   "t500_s": 491.0,
+   "t600_s": 556.0,
+   "t700_s": 576.0,
+   "t800_s": 888.0,
+   "alpha600_K_s2": 0.001941,
+   "alpha500_K_s2": 0.002074,
+   "alpha_env_K_s2": 0.001938,
+   "grade": "III",
+   "rise_300_600_s": 218.0,
+   "dur_600K_s": 652,
+   "n_tc_600_of_3": 3,
+   "excess_600K_Kmin": 2097.946667,
+   "exposure_Kmin": 14261.651667,
+   "v_front_2000_3000_mm_s": 4.488446,
+   "front_simultaneous": false,
+   "early_max_dT_K": 155.4,
+   "early_mean_dT_60_120_K": 144.542623,
+   "cooling_event_s": null
+  },
+  "PF_in-2": {
+   "test": "PF_in-2",
+   "material": "PF_in",
+   "repeat": 2,
+   "record_s": 1808,
+   "in_index": true,
+   "T0_C": 24.1,
+   "peak_C": 1095.8,
+   "t_peak_s": 1416.0,
+   "t300_s": 299.0,
+   "t400_s": 376.0,
+   "t500_s": 436.0,
+   "t600_s": 472.0,
+   "t700_s": 504.0,
+   "t800_s": 756.0,
+   "alpha600_K_s2": 0.002693,
+   "alpha500_K_s2": 0.00263,
+   "alpha_env_K_s2": 0.002564,
+   "grade": "III",
+   "rise_300_600_s": 173.0,
+   "dur_600K_s": 1025,
+   "n_tc_600_of_3": 2,
+   "excess_600K_Kmin": 3768.716667,
+   "exposure_Kmin": 17792.466667,
+   "v_front_2000_3000_mm_s": 3.759328,
+   "front_simultaneous": false,
+   "early_max_dT_K": 227.5,
+   "early_mean_dT_60_120_K": 192.229508,
+   "cooling_event_s": null
+  }
+ },
+ "materials": [
+  {
+   "material": "EPS_C",
+   "label_ko": "EPS 가연성",
+   "n_index": 0,
+   "tests": "EPS_C-1 EPS_C-2",
+   "note": "records shorter than 30 min: not graded"
+  },
+  {
+   "material": "EPS_SC",
+   "label_ko": "EPS 준불연",
+   "n_index": 3,
+   "tests": "EPS_SC-1 EPS_SC-2 EPS_SC-3",
+   "t600_reached": "2/3",
+   "t600_min_s": 962.0,
+   "t600_max_s": 975.0,
+   "alpha600_max": 0.000648,
+   "alpha600_min": 0.0,
+   "grades": "II / I / II",
+   "peak_mean_C": 624.833333,
+   "excess_600K_mean_Kmin": 49.69,
+   "dur_600K_mean_s": 57.333333
+  },
+  {
+   "material": "PIR_SC",
+   "label_ko": "PIR 준불연(sc)",
+   "n_index": 1,
+   "tests": "PIR_SC-2",
+   "t600_reached": "1/1",
+   "t600_min_s": 1091.0,
+   "t600_max_s": 1091.0,
+   "alpha600_max": 0.000504,
+   "alpha600_min": 0.000504,
+   "grades": "II",
+   "peak_mean_C": 1148.9,
+   "excess_600K_mean_Kmin": 1365.636667,
+   "dur_600K_mean_s": 412.0
+  },
+  {
+   "material": "PF_out",
+   "label_ko": "PF 외장용 준불연",
+   "n_index": 2,
+   "tests": "PF_out-1 PF_out-2",
+   "t600_reached": "2/2",
+   "t600_min_s": 1245.0,
+   "t600_max_s": 1455.0,
+   "alpha600_max": 0.000387,
+   "alpha600_min": 0.000283,
+   "grades": "II / II",
+   "peak_mean_C": 1079.9,
+   "excess_600K_mean_Kmin": 736.843333,
+   "dur_600K_mean_s": 220.5
+  },
+  {
+   "material": "PF_in",
+   "label_ko": "PF 내장용 준불연",
+   "n_index": 2,
+   "tests": "PF_in-1 PF_in-2",
+   "t600_reached": "2/2",
+   "t600_min_s": 472.0,
+   "t600_max_s": 556.0,
+   "alpha600_max": 0.002693,
+   "alpha600_min": 0.001941,
+   "grades": "III / III",
+   "peak_mean_C": 1115.55,
+   "excess_600K_mean_Kmin": 2933.331667,
+   "dur_600K_mean_s": 838.5
+  }
+ ],
+ "robustness": {
+  "tau": {
+   "400K/1s": 0.545545,
+   "400K/10s": 0.571429,
+   "400K/30s": 0.571429,
+   "500K/1s": 0.571429,
+   "500K/10s": 0.857143,
+   "500K/30s": 0.857143,
+   "600K/1s": 1.0,
+   "600K/10s": 1.0,
+   "600K/30s": 1.0,
+   "700K/1s": 0.763763,
+   "700K/10s": 0.763763,
+   "700K/30s": 0.491354
+  },
+  "tau_min": 0.491354,
+  "tau_median": 0.763763,
+  "same_grade_share": {
+   "EPS_SC-1": 0.916667,
+   "EPS_SC-2": 0.833333,
+   "EPS_SC-3": 0.75,
+   "PIR_SC-2": 0.5,
+   "PF_out-1": 1.0,
+   "PF_out-2": 0.666667,
+   "PF_in-1": 0.75,
+   "PF_in-2": 0.5
+  }
+ },
+ "growth_shape": [
+  {
+   "test": "EPS_SC-1",
+   "window_s": "60-993",
+   "n_best": 1.0,
+   "ti_best_s": 980.0,
+   "r2_best": 0.929919,
+   "rmse_best_K": 9.056806,
+   "ti_t2_s": 974.0,
+   "a_t2_K_s2": 1.348706,
+   "r2_t2": 0.925373,
+   "rmse_t2_K": 9.345944
+  },
+  {
+   "test": "EPS_SC-2",
+   "window_s": "60-1074",
+   "n_best": 0.5,
+   "ti_best_s": 82.0,
+   "r2_best": 0.362845,
+   "rmse_best_K": 16.362953,
+   "ti_t2_s": 1050.0,
+   "a_t2_K_s2": 0.226761,
+   "r2_t2": 0.209692,
+   "rmse_t2_K": 18.223729
+  },
+  {
+   "test": "EPS_SC-3",
+   "window_s": "60-1003",
+   "n_best": 0.75,
+   "ti_best_s": 990.0,
+   "r2_best": 0.71333,
+   "rmse_best_K": 16.901505,
+   "ti_t2_s": 980.0,
+   "a_t2_K_s2": 0.684193,
+   "r2_t2": 0.702392,
+   "rmse_t2_K": 17.220927
+  },
+  {
+   "test": "PIR_SC-2",
+   "window_s": "60-1277",
+   "n_best": 1.75,
+   "ti_best_s": 60.0,
+   "r2_best": 0.954292,
+   "rmse_best_K": 45.908946,
+   "ti_t2_s": 60.0,
+   "a_t2_K_s2": 0.000474,
+   "r2_t2": 0.952599,
+   "rmse_t2_K": 46.751734
+  },
+  {
+   "test": "PF_out-1",
+   "window_s": "60-1321",
+   "n_best": 1.5,
+   "ti_best_s": 622.0,
+   "r2_best": 0.947435,
+   "rmse_best_K": 33.815954,
+   "ti_t2_s": 474.0,
+   "a_t2_K_s2": 0.000689,
+   "r2_t2": 0.94697,
+   "rmse_t2_K": 33.965325
+  },
+  {
+   "test": "PF_out-2",
+   "window_s": "60-1618",
+   "n_best": 0.75,
+   "ti_best_s": 280.0,
+   "r2_best": 0.762781,
+   "rmse_best_K": 75.813095,
+   "ti_t2_s": 60.0,
+   "a_t2_K_s2": 0.000183,
+   "r2_t2": 0.727702,
+   "rmse_t2_K": 81.225421
+  },
+  {
+   "test": "PF_in-1",
+   "window_s": "60-1014",
+   "n_best": 0.5,
+   "ti_best_s": 348.0,
+   "r2_best": 0.977808,
+   "rmse_best_K": 40.703995,
+   "ti_t2_s": 60.0,
+   "a_t2_K_s2": 0.000947,
+   "r2_t2": 0.88583,
+   "rmse_t2_K": 92.323859
+  },
+  {
+   "test": "PF_in-2",
+   "window_s": "60-1390",
+   "n_best": 0.5,
+   "ti_best_s": 308.0,
+   "r2_best": 0.942061,
+   "rmse_best_K": 67.134744,
+   "ti_t2_s": 60.0,
+   "a_t2_K_s2": 0.000422,
+   "r2_t2": 0.639013,
+   "rmse_t2_K": 167.574632
+  }
+ ]
+}

@@ -1,4 +1,5 @@
 # raw test workbooks stay local (public repository)
 hollow_layer_fire/data/*.xlsx
+cavity_fire_index/data/*.xlsx
 __pycache__/
 *.pyc
