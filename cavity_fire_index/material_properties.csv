@@ -1,0 +1,6 @@
+material,label_ko,k_W_mK,rho_kg_m3,c_J_kgK,T_ig_C,T0_C,q_cone_kW_m2,t_ig_cone_s,q_cr_kW_m2,TRP_kW_s05_m2,pHRR_kW_m2,THR_MJ_m2,source
+EPS_C,EPS 가연성,,,,,20,50,,,,,,
+EPS_SC,EPS 준불연,,,,,20,50,,,,,,
+PIR_SC,PIR 준불연,,,,,20,50,,,,,,
+PF_out,PF 외장용 준불연,,,,,20,50,,,,,,
+PF_in,PF 내장용 준불연,,,,,20,50,,,,,,

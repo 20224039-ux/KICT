@@ -220,6 +220,10 @@
 6. **등급 경계(7.5·15·30분)는 제안값**입니다. 규제·인증 기준이 아니라 비교용 지표입니다. 시험법(측정 높이 3 m, 화원 조건)이 BS 8414/KS F 8414(레벨 2 = 개구부 상단 5 m)와 다르므로, 판정 대신 상대 비교에 쓰십시오.
 7. 확산 유형 해석(보호층 파손, 용융 EPS 연소 등)은 온도만으로 추정한 것입니다. **시험 영상·관찰기록**과 대조해 주십시오.
 
+## 8. 다음 단계 – 열물성 기반 외벽 화재위험 평가식
+
+비열·밀도·열전도율(k·ρ·c), 착화온도, 발열량으로 α₆₀₀와 외벽 위험등급(FRI)을 예측하는 평가식과 보정 절차는 [RISK_MODEL.md](RISK_MODEL.md)에 정리했습니다(계산: `python risk_model.py`, 입력: `material_properties.csv`).
+
 ---
 
 ## 부록: 재현 방법과 산출물
@@ -244,3 +248,4 @@ python analysis.py data/EPS.xlsx data/PF.xlsx data/PIR_SC_2_max.xlsx   # figures
   - `growth_shape_3000mm.csv` – §3 적합 결과
   - `robustness.csv` – 12개 정의별 α·순위·등급
   - `summary.json` – 정의, 데이터 품질점검 로그(붙여넣기 검출·센서 결함·보간 구간), 전체 결과
+  - `risk_model.csv` – `risk_model.py` 결과(실측 FRI, 모델이 요구하는 재료지수 비, 물성 입력 시 보정·예측값)
