@@ -1,9 +1,9 @@
-test,material,t600_s,FRI_measured,grade_measured,required_M_ratio_vs_ref,kRhoC,TRP_nominal,TRP_cone,TRP_used,M,b_gate,TRP_source
-EPS_SC-1,EPS_SC,962.0,0.935551,II,1.064939,,,,,,,
-EPS_SC-2,EPS_SC,,,I,,,,,,,,
-EPS_SC-3,EPS_SC,975.0,0.923077,II,1.057816,,,,,,,
-PIR_SC-2,PIR_SC,1091.0,0.824931,II,1.0,,,,,,,
-PF_out-1,PF_out,1245.0,0.722892,II,0.936112,,,,,,,
-PF_out-2,PF_out,1455.0,0.618557,II,0.865926,,,,,,,
-PF_in-1,PF_in,556.0,1.618705,III,1.400796,,,,,,,
-PF_in-2,PF_in,472.0,1.90678,III,1.520342,,,,,,,
+test,material,t600_s,alpha600_K_s2,FRI_measured,grade_measured,P,D600_min,S,R,risk_level,tau_300_600_s,abrupt_flag,required_M_ratio_vs_ref,kRhoC,TRP_nominal,TRP_cone,TRP_used,M,b_gate,TRP_source
+EPS_SC-1,EPS_SC,962.0,0.000648,0.935551,II,2,2.3,2,4,보통,8.0,A,1.064939,,,,,,,
+EPS_SC-2,EPS_SC,,,,I,1,0.0,1,1,낮음,,,,,,,,,,
+EPS_SC-3,EPS_SC,975.0,0.000631,0.923077,II,2,0.566667,1,2,낮음,13.0,A,1.057816,,,,,,,
+PIR_SC-2,PIR_SC,1091.0,0.000504,0.824931,II,2,6.866667,3,6,보통,426.0,,1.0,,,,,,,
+PF_out-1,PF_out,1245.0,0.000387,0.722892,II,2,2.883333,2,4,보통,314.0,,0.936112,,,,,,,
+PF_out-2,PF_out,1455.0,0.000283,0.618557,II,2,4.466667,2,4,보통,995.0,,0.865926,,,,,,,
+PF_in-1,PF_in,556.0,0.001941,1.618705,III,3,10.866667,4,12,매우 높음,218.0,,1.400796,,,,,,,
+PF_in-2,PF_in,472.0,0.002693,1.90678,III,3,17.083333,4,12,매우 높음,173.0,,1.520342,,,,,,,

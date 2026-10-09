@@ -26,6 +26,9 @@ HERE = Path(__file__).resolve().parent
 THETA_REF = 600.0          # K
 T_REF_S = 900.0            # s, reference time for FRI (BS 8414-style 15 min window)
 FRI_GRADES = ((2.0, "IV"), (1.0, "III"), (0.5, "II"))   # FRI >= bound -> grade; else I
+S_BOUNDS_MIN = (1.0, 5.0, 10.0)   # min of dT >= 600 K at 3000 mm -> severity S1..S4 (proposed, data-based)
+ABRUPT_S = 30.0            # s, t300 -> t600 at or below this = abrupt (sudden whole-cavity ignition) flag "A"
+RISK_LEVELS = ((12, "매우 높음"), (8, "높음"), (4, "보통"), (1, "낮음"))   # R = P x S >= bound
 K_F = 0.01                 # m²/kW, flame-length coefficient of the linearised upward-spread model (verify / calibrate)
 REFERENCE = "PIR_SC"       # material the required index ratios are expressed against
 
@@ -40,6 +43,22 @@ def fnum(s):
 def read_csv(path):
     with open(path, encoding="utf-8") as f:
         return list(csv.DictReader(f))
+
+
+def p_class(fri, reached):
+    """Spread-speed class P from FRI: 4 (>= 2 floors), 3 (1-2), 2 (0.5-1), 1 (< 0.5 or not reached in 30 min)."""
+    if not reached:
+        return 1
+    return 4 if fri >= 2 else 3 if fri >= 1 else 2 if fri >= 0.5 else 1
+
+
+def s_class(d600_min):
+    """Severity class S from the time dT >= 600 K is held at 3000 mm."""
+    return 1 + sum(d600_min >= b for b in S_BOUNDS_MIN)
+
+
+def risk_level(r):
+    return next(name for bound, name in RISK_LEVELS if r >= bound)
 
 
 def grade_from_fri(fri):
@@ -108,8 +127,15 @@ def main():
         k = r["test"]
         t = t600[k]
         fri = args.t_ref / t if np.isfinite(t) else np.nan
-        row = dict(test=k, material=mat[k], t600_s=t, FRI_measured=fri,
+        src = next(x for x in tests if x["test"] == k)
+        d600 = fnum(src["dur_600K_s"]) / 60
+        tau = fnum(src["rise_300_600_s"])
+        P, S = p_class(fri, np.isfinite(t)), s_class(d600)
+        row = dict(test=k, material=mat[k], t600_s=t,
+                   alpha600_K_s2=THETA_REF / t ** 2 if np.isfinite(t) else np.nan, FRI_measured=fri,
                    grade_measured=grade_from_fri(fri) if np.isfinite(t) else "I",
+                   P=P, D600_min=d600, S=S, R=P * S, risk_level=risk_level(P * S),
+                   tau_300_600_s=tau, abrupt_flag="A" if np.isfinite(tau) and tau <= ABRUPT_S else "",
                    required_M_ratio_vs_ref=np.sqrt(t_ref_mat / t) if np.isfinite(t) else np.nan)
         tm = terms.get(mat[k], {})
         row.update({f"{n}": tm.get(n, np.nan) for n in ("kRhoC", "TRP_nominal", "TRP_cone", "TRP_used", "M", "b_gate")})
@@ -137,6 +163,7 @@ def main():
                             round(v, 6) if isinstance(v, float) else v) for k, v in ((k, r.get(k, np.nan)) for k in keys)})
     for r in rows:
         print(f"{r['test']:12s} {r['material']:7s} t600={r.get('t600_s', np.nan):7.0f} FRI={r.get('FRI_measured', np.nan):5.2f} "
+              f"P={r.get('P', '-')} S={r.get('S', '-')} R={r.get('R', '-')} {r.get('risk_level', '')}{r.get('abrupt_flag', '')} "
               f"grade={r.get('grade_measured', '-'):3s} M/M_ref(required)={r.get('required_M_ratio_vs_ref', np.nan):5.2f} "
               f"pred t600={r.get('t600_pred_s', np.nan):7.0f} grade_pred={r.get('grade_pred', '-')}")
 
