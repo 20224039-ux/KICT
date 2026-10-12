@@ -1,2 +1,2 @@
-t_ig_sys_s,C_sys,C_sys_sd,C_sys_cv,t_spread_cv,r_bound_P2,r_bound_P3,r_bound_P4,n_tests,f400_melt,f400_sustain
-220.0,417.8286,58.6492,0.1404,0.5546,0.2644,0.6145,1.8166,5,0.5,0.65
+t_ig_sys_s,C_sys,C_sys_sd,C_sys_cv,t_spread_cv,r_bound_P2,r_bound_P3,r_bound_P4,n_tests,tests,f400_melt,f400_sustain
+247.5,422.9665,53.946,0.1275,0.4909,0.2724,0.6482,2.0887,6,PIR_SC-1 PIR_SC-2 PF_out-1 PF_out-2 PF_in-1 PF_in-2,0.5,0.65

@@ -1,0 +1,2 @@
+material,fit_tests,prediction_commit,t_ig_sys_s,C_sys,r_max_air,t_sp_hat_s,t600_hat_s,t600_hat_lo_s,t600_hat_hi_s,alpha600_hat_K_s2,FRI_hat,P_hat,B_hat,t600_measured_s,t600_measured_tests,P_measured,R_measured,flags_measured
+PIR_C,PIR_SC-2 PF_out-1 PF_out-2 PF_in-1 PF_in-2,81ea74e,220.0,417.8286,0.7496,557.402,777.402,699.1614,855.6427,0.001,1.1577,3,B,30.0,31/29,4,16/16,A/A

@@ -55,15 +55,17 @@ NOMINAL_KPC_MID = float(np.sqrt(NOMINAL_KPC[0] * NOMINAL_KPC[1]))   # ρ 15-60 k
 # cavity material key -> (TGA file stem, Korean label, English label)
 MATS = {
     "EPS_SC": ("eps_sc", "EPS 준불연", "EPS semi-noncomb."),
+    "PIR_C": ("pir_c", "PIR(PUR) 가연성", "PIR(PUR) combustible"),
     "PIR_SC": ("pir_sc", "PIR(PUR) 준불연", "PIR(PUR) semi-noncomb."),
-    "PF_out": ("pf_outter", "PF 외장용", "PF exterior"),
-    "PF_in": ("pf_inner", "PF 내장용", "PF interior"),
+    "PF_out": ("pf_outter", "PF 준불연 외부용", "PF exterior-use"),
+    "PF_in": ("pf_inner", "PF 준불연 내부용", "PF interior-use"),
 }
+FLASH_S = PLATEAU_S[1]                          # t600 before the end of the burner-only window: whole-cavity flash
 SURFACE, INK, INK2, MUTED = "#fcfcfb", "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS = "#e1e0d9", "#c3c2b7"
-MAT_COLOR = {"EPS_SC": "#e87ba4", "PIR_SC": "#008300", "PF_out": "#2a78d6", "PF_in": "#4a3aa7"}
-MAT_MARK = {"EPS_SC": "s", "PIR_SC": "^", "PF_out": "D", "PF_in": "v"}
-PHASE_COLOR = {"ignition": "#c3c2b7", "spread": "#2a78d6"}
+MAT_COLOR = {"EPS_SC": "#e87ba4", "PIR_C": "#8c564b", "PIR_SC": "#008300", "PF_out": "#2a78d6", "PF_in": "#4a3aa7"}
+MAT_MARK = {"EPS_SC": "s", "PIR_C": "P", "PIR_SC": "^", "PF_out": "D", "PF_in": "v"}
+PHASE_COLOR = {"ignition": "#c3c2b7", "spread": "#2a78d6", "flash": "#eb6834"}
 
 
 # ----------------------------------------------------------------------------- TGA critical temperature
@@ -158,10 +160,15 @@ def style():
 
 
 def fig_phases(ph, path):
-    fig, ax = plt.subplots(figsize=(11, 4.8))
+    fig, ax = plt.subplots(figsize=(11, 6.0))
     rows = ph.sort_values("t600_s")
     y = np.arange(len(rows))[::-1]
     for yy, (_, r) in zip(y, rows.iterrows()):
+        if r["flash"]:
+            ax.barh(yy, r["t600_s"], color=PHASE_COLOR["flash"], height=0.6)
+            ax.text(r["t600_s"] + 15, yy, f"whole-cavity flash: 3000 mm dT 600 K at {r['t600_s']:.0f} s (no ignition delay)",
+                    va="center", fontsize=8.5, color=INK, bbox=dict(fc=SURFACE, ec="none", pad=1.5))
+            continue
         ax.barh(yy, r["t_ig_s"], color=PHASE_COLOR["ignition"], height=0.6)
         if np.isfinite(r["t600_s"]):
             ax.barh(yy, r["t600_s"] - r["t_ig_s"], left=r["t_ig_s"], color=PHASE_COLOR["spread"], height=0.6)
@@ -180,7 +187,7 @@ def fig_phases(ph, path):
             fontsize=8, color=INK2)
     ax.set_ylim(-1.0, len(rows) - 0.3)
     ax.grid(axis="y", visible=False)
-    ax.set_title("t600 split into ignition (grey: first +50 K above the burner-only level) and spread (blue)")
+    ax.set_title("t600 split into ignition (grey: first +50 K above the burner-only level) and spread (blue); orange = flash")
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -200,7 +207,7 @@ def fig_tga_links(mat, path):
     for ax, xc, yc, ylo, yhi, xl, yl, title in panels:
         for _, r in mat.iterrows():
             k = r["material"]
-            if not np.isfinite(r[yc]) or (ax is axs[0] and k == "EPS_SC"):
+            if not np.isfinite(r[yc]) or (ax is axs[0] and k in ("EPS_SC", "PIR_C")):
                 continue
             ax.errorbar([r[xc]], [r[yc]], yerr=[[r[yc] - r[ylo]], [r[yhi] - r[yc]]], fmt=MAT_MARK[k],
                         color=MAT_COLOR[k], ms=10, mec=SURFACE, mew=1.2, elinewidth=1, capsize=0)
@@ -211,7 +218,8 @@ def fig_tga_links(mat, path):
         ax.set_ylabel(yl)
         ax.set_title(title)
     axs[0].set_xlim(0.3, 1.3)
-    axs[0].text(0.98, 0.97, "EPS semi-noncomb. not shown:\nmelts back, then flashes", transform=axs[0].transAxes,
+    axs[0].text(0.98, 0.97, "not shown: EPS semi-noncomb. (melts back, then flashes)\n"
+                "and PIR(PUR) combustible (whole cavity at 600 K within 31 s)", transform=axs[0].transAxes,
                 ha="right", va="top", fontsize=8, color=INK2)
     fig.tight_layout()
     fig.savefig(path, dpi=150)
@@ -273,7 +281,7 @@ def fig_burner_off(bo, path):
 
 def main():
     D = ROOT / "cavity_fire_index" / "data"
-    tests = cfa.read_tests([D / "EPS.xlsx", D / "PF.xlsx", D / "PIR_SC_2_max.xlsx"])
+    tests = cfa.read_tests([D / "EPS.xlsx", D / "PF.xlsx", D / "PIR.xlsx"])
     cfa.prepare(tests)
     idx = {k: cfa.index_3000(k, v) for k, v in tests.items()}
     keys = [k for k in sorted(tests) if tests[k]["full"]]
@@ -284,22 +292,25 @@ def main():
     for k in keys:
         v = tests[k]
         mat = v["material"]
-        dep = {thr: departure(v, thr) for thr in DEPART_K}
-        t_ig = dep[DEPART_MAIN]
         t600 = idx[k]["t600_s"]
+        flash = bool(np.isfinite(t600) and t600 <= FLASH_S)    # no burner-only reference period exists
+        dep = {thr: (np.nan if flash else departure(v, thr)) for thr in DEPART_K}
+        t_ig = dep[DEPART_MAIN]
         Tg = cfa.smooth(v["H"][:, EXPOSURE_LEVEL], 11) + 273.15
         kpcs = {}
         for thr in DEPART_K:
             for rate in TCRIT_RATE:
                 for case, (hc, eps) in HEAT_CASES.items():
-                    kp = invert_kpc(Tg, dep[thr], tcrit[mat][rate] + 273.15, hc, eps) if mat != "EPS_SC" else np.nan
+                    kp = invert_kpc(Tg, dep[thr], tcrit[mat][rate] + 273.15, hc, eps) \
+                        if mat != "EPS_SC" and not flash else np.nan
                     kpcs[(thr, rate, case)] = kp
                     inv_rows.append(dict(test=k, material=mat, depart_K=thr, tcrit_rate=rate, heat_case=case,
                                          t_ig_s=dep[thr], T_crit_C=tcrit[mat][rate], kpc_eff=kp))
         central = kpcs[(DEPART_MAIN, TCRIT_MAIN, "central")]
         allv = np.array([x for x in kpcs.values() if np.isfinite(x)])
         dTc = tcrit[mat][TCRIT_MAIN] - (Tg[0] - 273.15)
-        rows.append(dict(test=k, material=mat, repeat=v["repeat"], t_ig_s=t_ig, t_ig_range_s=f"{min(dep.values()):.0f}-{max(dep.values()):.0f}",
+        rows.append(dict(test=k, material=mat, repeat=v["repeat"], flash=flash, t_ig_s=t_ig,
+                         t_ig_range_s="" if flash else f"{min(dep.values()):.0f}-{max(dep.values()):.0f}",
                          t600_s=t600, t_spread_s=t600 - t_ig if np.isfinite(t600) else np.nan,
                          T_exposure_1000mm_mean_C=float(np.nanmean(Tg[:int(t_ig) + 1]) - 273.15) if np.isfinite(t_ig) else np.nan,
                          T_crit_C=tcrit[mat][TCRIT_MAIN], kpc_central=central,
@@ -335,11 +346,14 @@ def main():
         b = bo[bo.material == mat]
         sp = p["t_spread_s"].to_numpy(dtype=float)
         sp_c = np.where(np.isfinite(sp), sp, 1800 - p["t_ig_s"].to_numpy(dtype=float))
+        sp_c = sp_c[np.isfinite(sp_c)]
         s_air = tsum[(tsum.atmosphere == "oxidative (O)") & (tsum.material == mat)].iloc[0]
         d6 = b.groupby("test")["D600_after_off_s"].sum()
         mrows.append(dict(
-            material=mat, label_ko=ko, n=len(p), t_ig_med=float(np.median(p["t_ig_s"])), t_spread_med=float(np.median(sp_c)),
-            t_spread_min=float(np.min(sp_c)), t_spread_max=float(np.max(sp_c)),
+            material=mat, label_ko=ko, n=len(p), flash=bool(p["flash"].all()), t600_med=float(np.nanmedian(p["t600_s"])),
+            t_ig_med=float(np.nanmedian(p["t_ig_s"])) if p["t_ig_s"].notna().any() else np.nan,
+            t_spread_med=float(np.median(sp_c)) if sp_c.size else np.nan,
+            t_spread_min=float(np.min(sp_c)) if sp_c.size else np.nan, t_spread_max=float(np.max(sp_c)) if sp_c.size else np.nan,
             kpc_central=float(np.nanmedian(p["kpc_central"])) if p["kpc_central"].notna().any() else np.nan,
             kpc_min=float(np.nanmin(p["kpc_min"])) if p["kpc_min"].notna().any() else np.nan,
             kpc_max=float(np.nanmax(p["kpc_max"])) if p["kpc_max"].notna().any() else np.nan,
@@ -351,7 +365,7 @@ def main():
             tga_Ta90_air=float(s_air["T_a90_C_mean"]), T_crit_C=tcrit[mat][TCRIT_MAIN]))
     mat = pd.DataFrame(mrows)
     mat.round(4).to_csv(HERE / "results" / "material_summary.csv", index=False, encoding="utf-8")
-    sub = mat[mat.material != "EPS_SC"]
+    sub = mat[(mat.material != "EPS_SC") & mat["t_spread_med"].notna()]
     rho_sp = stats.spearmanr(sub["tga_rmax_air"], -sub["t_spread_med"]).statistic
     rho_char = stats.spearmanr(mat["tga_f400_air"], mat["D600_after_off_med"])
 
@@ -365,8 +379,8 @@ def main():
     pd.set_option("display.max_columns", 40)
     print(ph.round(3).to_string())
     print(mat.round(3).to_string())
-    print("spearman rmax_air vs spread speed (PF_in, PF_out, PIR):", rho_sp)
-    print("spearman f400_air vs D600 after burner off (4 materials):", rho_char.statistic, rho_char.pvalue)
+    print("spearman rmax_air vs spread speed (charring, sc):", rho_sp)
+    print("spearman f400_air vs D600 after burner off (all materials):", rho_char.statistic, rho_char.pvalue)
     print(bo.pivot_table(index="test", columns="height_mm", values="ssr").round(2).to_string())
     print(bo.pivot_table(index="test", columns="height_mm", values="D600_after_off_s").to_string())
     print("TGA critical temperatures:", {k: {r: round(x, 1) for r, x in v.items()} for k, v in tcrit.items()})

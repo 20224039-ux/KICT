@@ -43,10 +43,10 @@ PEAK_TMAX_C = 750.0        # main-peak search window upper limit (loss still acc
 MATERIALS = {
     "eps_c": ("EPS_C", "EPS 가연성", "EPS combustible"),
     "eps_sc": ("EPS_SC", "EPS 준불연", "EPS semi-noncomb."),
-    "pir_c": ("PIR_C", "PIR 가연성", "PIR combustible"),
-    "pir_sc": ("PIR_SC", "PIR 준불연", "PIR semi-noncomb."),
-    "pf_outter": ("PF_out", "PF 외장용", "PF exterior"),
-    "pf_inner": ("PF_in", "PF 내장용", "PF interior"),
+    "pir_c": ("PIR_C", "PIR(PUR) 가연성", "PIR(PUR) combustible"),
+    "pir_sc": ("PIR_SC", "PIR(PUR) 준불연", "PIR(PUR) semi-noncomb."),
+    "pf_outter": ("PF_out", "PF 준불연 외부용", "PF exterior-use"),
+    "pf_inner": ("PF_in", "PF 준불연 내부용", "PF interior-use"),
 }
 ATM = {"N": "N2", "O": "oxidative (O)"}
 
@@ -54,8 +54,8 @@ ATM = {"N": "N2", "O": "oxidative (O)"}
 SURFACE, INK, INK2, MUTED = "#fcfcfb", "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS = "#e1e0d9", "#c3c2b7"
 ATM_COLOR = {"N": "#2a78d6", "O": "#eb6834"}
-MAT_COLOR = {"EPS_SC": "#e87ba4", "PIR_SC": "#008300", "PF_out": "#2a78d6", "PF_in": "#4a3aa7"}
-MAT_MARK = {"EPS_SC": "s", "PIR_SC": "^", "PF_out": "D", "PF_in": "v"}
+MAT_COLOR = {"EPS_SC": "#e87ba4", "PIR_C": "#8c564b", "PIR_SC": "#008300", "PF_out": "#2a78d6", "PF_in": "#4a3aa7"}
+MAT_MARK = {"EPS_SC": "s", "PIR_C": "P", "PIR_SC": "^", "PF_out": "D", "PF_in": "v"}
 
 
 def stem(name):
@@ -185,7 +185,7 @@ def fig_fire_link(summary, fire, path):
     axs[0].set_ylabel("Cavity t600 at 3000 mm (s, median; bar = repeats)")
     fig.text(0.01, 0.005, "Upper bar of EPS semi-noncomb. reaches 1800 s: one of three cavity tests never reached the criterion.",
              fontsize=8.5, color=INK2)
-    axs[0].set_ylim(300, 1850)
+    axs[0].set_ylim(0, 1850)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     fig.savefig(path, dpi=150)
     plt.close(fig)

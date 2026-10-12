@@ -3,12 +3,14 @@
 
 Cavity fire tests (100 mm cavity, 100 mm external insulation): 18 thermocouples
 (three per height at 500, 1000, 1500, 2000, 2500, 3000 mm; CH1-3 = 500 mm ... CH16-18 = 3000 mm),
-1 Hz logs. Materials: EPS combustible / semi-noncombustible, PIR (sc), PF board exterior / interior.
+1 Hz logs. Materials: EPS and PIR(PUR) combustible (c) / semi-noncombustible (sc), PF board (sc only)
+for exterior use (out) / interior use (in).
 
-    python analysis.py data/EPS.xlsx data/PF.xlsx data/PIR_SC_2_max.xlsx
+    python analysis.py data/EPS.xlsx data/PF.xlsx data/PIR.xlsx
 
-Sheet names identify the tests: '(n) EPS_C', '(n) EPS_SC', '(n) PF_semi_out', '(n) PF_semi_in'
-(column 'm' followed by CH1..CH18) and 'sc_2 max' (column 's' followed by one max column per height).
+Sheet names identify the tests: '(n) EPS_C', '(n) EPS_SC', '(n) PF_semi_out', '(n) PF_semi_in', '(n) PIR_c',
+'(n) PIR_sc' (time column 'm' in minutes or 's' in seconds, followed by CH1..CH18). The older max-only sheet
+'sc_2 max' (column 's' followed by one max column per height) is still read.
 Writes figures/*.png, results/*.csv and results/summary.json next to this file.
 """
 from __future__ import annotations
@@ -52,11 +54,13 @@ EARLY_S = 120
 MATERIALS = {
     "EPS_C": ("EPS 가연성", "EPS combustible", "#eda100", "o"),
     "EPS_SC": ("EPS 준불연", "EPS semi-noncomb.", "#e87ba4", "s"),
-    "PIR_SC": ("PIR 준불연(sc)", "PIR (sc)", "#008300", "^"),
-    "PF_out": ("PF 외장용 준불연", "PF exterior", "#2a78d6", "D"),
-    "PF_in": ("PF 내장용 준불연", "PF interior", "#4a3aa7", "v"),
+    "PIR_C": ("PIR(PUR) 가연성", "PIR(PUR) combustible", "#8c564b", "P"),
+    "PIR_SC": ("PIR(PUR) 준불연", "PIR(PUR) semi-noncomb.", "#008300", "^"),
+    "PF_out": ("PF 준불연 외부용", "PF exterior-use", "#2a78d6", "D"),
+    "PF_in": ("PF 준불연 내부용", "PF interior-use", "#4a3aa7", "v"),
 }
-SHEET_KIND = {"EPS_C": "EPS_C", "EPS_SC": "EPS_SC", "PF_semi_out": "PF_out", "PF_semi_in": "PF_in"}
+SHEET_KIND = {"EPS_C": "EPS_C", "EPS_SC": "EPS_SC", "PF_semi_out": "PF_out", "PF_semi_in": "PF_in",
+              "PIR_c": "PIR_C", "PIR_sc": "PIR_SC"}
 REPEAT_STYLE = {0: (0, (1, 1.5)), 1: "-", 2: (0, (5, 2)), 3: (0, (1.5, 1.5))}
 
 # chart tokens (dataviz reference palette, light surface)
@@ -163,18 +167,24 @@ def read_tests(paths):
             if not rows:
                 continue
             title, hdr = ws.title.strip(), [str(h).strip() if h is not None else "" for h in rows[0]]
-            m = re.match(r"^\((\d+)\)\s*(EPS_C|EPS_SC|PF_semi_out|PF_semi_in)$", title)
+            m = re.match(r"^\((\d+)\)\s*(EPS_C|EPS_SC|PF_semi_out|PF_semi_in|PIR_c|PIR_sc)$", title)
             if m:
                 rep, mat = int(m.group(1)), SHEET_KIND[m.group(2)]
-                i0 = hdr.index("m")
+                i0 = hdr.index("m") if "m" in hdr else hdr.index("s")
                 width = i0 + 19
                 body = [r + [None] * (width - len(r)) for r in rows[1:]]
                 tcol = np.array([num(r[i0]) for r in body])
                 ch = np.array([[num(v) for v in r[i0 + 1:i0 + 19]] for r in body])
                 empty = ~np.isfinite(ch).any(axis=1)
                 end = int(np.argmax(empty)) if empty.any() else len(ch)   # first all-empty row ends the log
+                restart = None
+                if hdr[i0] == "s":                                        # a repeated second = another record appended
+                    same = np.flatnonzero(np.diff(tcol[:end]) == 0)
+                    if same.size:
+                        restart = int(same[0]) + 1
+                        end = restart
                 tests[f"{mat}-{rep}"] = dict(material=mat, repeat=rep, source=f"{Path(path).name} / {ws.title}",
-                                             ch=ch[:end], tcol=tcol[:end], max_only=False)
+                                             ch=ch[:end], tcol=tcol[:end], max_only=False, restart_row=restart)
             elif re.match(r"^sc_(\d+)\s*max$", title, re.I):
                 rep = int(re.match(r"^sc_(\d+)", title, re.I).group(1))
                 i_s = hdr.index("s")
@@ -249,6 +259,8 @@ def prepare(tests):
     for k, v in tests.items():
         note = {"source": v["source"]}
         note.update(check_time_base(v["tcol"]))
+        if v.get("restart_row"):
+            note["appended_record_cut_at_s"] = v["restart_row"]
         if v["max_only"]:
             H = v["H_raw"].copy()
             H[(H < BAD_LOW_C) | (H > BAD_HIGH_C)] = np.nan
@@ -463,7 +475,7 @@ def label_of(k, tests):
 
 
 def fig_histories(tests, panels, idx, path):
-    fig, axs = plt.subplots(5, 3, figsize=(13.5, 15.5), sharey=True)
+    fig, axs = plt.subplots(len(panels), 3, figsize=(13.5, 3.1 * len(panels)), sharey=True)
     for r, row in enumerate(panels):
         for c in range(3):
             ax = axs[r, c]
@@ -535,8 +547,8 @@ def fig_fronts(tests, order, hm, path):
 
 
 def fig_at2(tests, order, short, idx, path):
-    fig = plt.figure(figsize=(16, 10.8))
-    gs = fig.add_gridspec(2, 5, height_ratios=[1, 1.05], hspace=0.42, wspace=0.08)
+    fig = plt.figure(figsize=(18, 10.8))
+    gs = fig.add_gridspec(2, len(MATERIALS), height_ratios=[1, 1.05], hspace=0.42, wspace=0.08)
     tt = np.linspace(0, EVAL_END_S, 400)
     for c, m in enumerate(MATERIALS):
         ax = fig.add_subplot(gs[0, c])
@@ -576,11 +588,11 @@ def fig_at2(tests, order, short, idx, path):
     ax = fig.add_subplot(gs[1, :])
     keys = order + short
     x = np.arange(len(keys))
-    lo, hi = 1e-4, 1e-2
+    lo, hi = 1e-4, 3.0
     bounds = [hi] + [THETA_REF / tg ** 2 for tg in GRADE_TG] + [lo]
     for g, (b1, b0) in zip(GRADE_NAMES, zip(bounds[:-1], bounds[1:])):
         ax.axhspan(b0, b1, color=GRADE_FILL[g], zorder=0, lw=0)
-        ax.text(-0.5, np.sqrt(b0 * b1), f"grade {g}", ha="left", va="center", fontsize=8.5, color=INK2)
+        ax.text(3.5, np.sqrt(b0 * b1), f"grade {g}", ha="center", va="center", fontsize=8.5, color=INK2)
     for xx, k in zip(x, keys):
         d = idx[k]
         m = tests[k]["material"]
@@ -593,7 +605,7 @@ def fig_at2(tests, order, short, idx, path):
             txt = "not reached\nin 30 min" if d["record_s"] >= EVAL_END_S else f"n/a\nrecord {d['record_s']} s"
             ax.text(xx, 1.25e-4, txt, ha="center", va="bottom", fontsize=7.8, color=INK2)
     ax.set_xticks(x)
-    ax.set_xticklabels([label_of(k, tests).replace(" #", "\n#") for k in keys], fontsize=8)
+    ax.set_xticklabels([label_of(k, tests).replace(" ", "\n") for k in keys], fontsize=8)
     ax.set_yscale("log")
     ax.set_ylim(lo, hi)
     ax.set_xlim(-0.6, len(keys) - 0.4)
@@ -606,14 +618,19 @@ def fig_at2(tests, order, short, idx, path):
 
 
 def fig_risk_map(tests, order, idx, path):
-    fig, ax = plt.subplots(figsize=(9.5, 6.4))
-    lo, hi = 1e-4, 1e-2
+    """Speed x severity; broken speed axis so that the 30-s flash tests do not compress the others."""
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(12, 6.6), sharey=True,
+                                  gridspec_kw=dict(width_ratios=[4.2, 1], wspace=0.05))
+    lo, hi, lo2, hi2 = 1e-4, 6e-3, 0.25, 2.0
     nr = 1.35e-4
-    bounds = [hi] + [THETA_REF / tg ** 2 for tg in GRADE_TG] + [lo]
+    bounds = [hi2] + [THETA_REF / tg ** 2 for tg in GRADE_TG] + [lo]
     for g, (b1, b0) in zip(GRADE_NAMES, zip(bounds[:-1], bounds[1:])):
-        ax.axvspan(b0, b1, color=GRADE_FILL[g], zorder=0, lw=0)
-        ax.text(np.sqrt(b0 * b1), 0.98, f"grade {g}", transform=ax.get_xaxis_transform(), ha="center", va="top",
-                fontsize=8.5, color=INK2)
+        ax.axvspan(b0, min(b1, hi), color=GRADE_FILL[g], zorder=0, lw=0)
+        ax.text(np.sqrt(b0 * min(b1, hi)), 0.98, f"grade {g}", transform=ax.get_xaxis_transform(), ha="center",
+                va="top", fontsize=8.5, color=INK2)
+    ax2.axvspan(lo2, hi2, color=GRADE_FILL["IV"], zorder=0, lw=0)
+    ax2.text(0.5, 0.98, "grade IV", transform=ax2.transAxes, ha="center", va="top", fontsize=8.5, color=INK2)
+    place = {"PF_out-1": (-9, 6, "right")}
     offsets = {}
     for k in order:
         d = idx[k]
@@ -621,27 +638,45 @@ def fig_risk_map(tests, order, idx, path):
         col, mk = MATERIALS[v["material"]][2], MATERIALS[v["material"]][3]
         x = d["alpha600_K_s2"] if np.isfinite(d["alpha600_K_s2"]) else nr
         yv = d["excess_600K_Kmin"]
+        txt = f"{label_of(k, tests)}\npeak {d['peak_C']:.0f} °C, {d['dur_600K_s'] / 60:.1f} min > 600 K"
+        if x > hi:
+            ax2.plot([x], [yv], marker=mk, color=col, ms=11, ls="none", zorder=5, **ring())
+            ax2.annotate(txt.replace(", ", ",\n"), (x, yv), xytext=(0, 10), textcoords="offset points", fontsize=7.6,
+                         color=INK, ha="center")
+            continue
         ax.plot([x], [yv], marker=mk, color=col, ms=11, ls="none", zorder=5, **ring())
         dy = offsets.get(round(np.log10(x), 1), 0)
         offsets[round(np.log10(x), 1)] = dy + 1
-        ax.annotate(f"{label_of(k, tests)}\npeak {d['peak_C']:.0f} °C, {d['dur_600K_s'] / 60:.1f} min > 600 K",
-                    (x, yv), xytext=(9, 6 - 22 * dy), textcoords="offset points", fontsize=7.6, color=INK)
-    ax.set_xscale("log")
-    ax.set_xlim(lo, hi)
+        dx, oy, ha = place.get(k, (9, 6 - 22 * dy, "left"))
+        ax.annotate(txt, (x, yv), xytext=(dx, oy), textcoords="offset points", fontsize=7.6, color=INK, ha=ha)
+    for a, (l, h) in ((ax, (lo, hi)), (ax2, (lo2, hi2))):
+        a.set_xscale("log")
+        a.set_xlim(l, h)
     ymax = max(idx[k]["excess_600K_Kmin"] for k in order)
-    ax.set_ylim(-0.05 * ymax, 1.18 * ymax)
+    ax.set_ylim(-0.05 * ymax, 1.22 * ymax)
     ax.set_xticks([nr, 1.85e-4, 7.41e-4, 2.96e-3])
     ax.set_xticklabels(["not\nreached", "1.85e-4\n(30 min)", "7.41e-4\n(15 min)", "2.96e-3\n(7.5 min)"])
-    ax.set_xlabel("Speed: a600 = 600 K / t600²  (K/s², log scale; t600 in brackets)")
+    ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax2.set_xticks([0.4, 0.667, 1.0])
+    ax2.set_xticklabels(["0.4", "0.667\n(30 s)", "1.0"])
+    ax2.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax2.spines["left"].set_visible(False)
+    ax2.tick_params(axis="y", left=False)
+    for a, xx in ((ax, 1.0), (ax2, 0.0)):
+        a.plot([xx - 0.008, xx + 0.008], [-0.012, 0.012], transform=a.transAxes, color=AXIS, lw=1.0, clip_on=False)
+    ax.set_xlabel("Speed: a600 = 600 K / t600²  (K/s², log scale, axis broken; t600 in brackets)")
     ax.set_ylabel("Severity: excess exposure  ∫(dT − 600 K)+ dt  (K·min, 0–30 min)")
     ax.set_title("Fire-spread risk map at 3000 mm (speed x severity)")
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.08, right=0.98, top=0.93, bottom=0.12)
     fig.savefig(path, dpi=150)
     plt.close(fig)
 
 
 def fig_growth_shape(tests, order, shapes, path):
-    fig, axs = plt.subplots(2, 4, figsize=(15, 7.2), sharey=True)
+    nrow = int(np.ceil(len(order) / 4))
+    fig, axs = plt.subplots(nrow, 4, figsize=(15, 3.6 * nrow), sharey=True)
+    for ax in axs.ravel()[len(order):]:
+        ax.axis("off")
     for ax, k in zip(axs.ravel(), order):
         v = tests[k]
         sh = shapes[k]
@@ -679,14 +714,14 @@ def fig_robustness(tests, order, rob, path):
         ax.plot(ROBUST_THETA, ys, color=col, ls=REPEAT_STYLE[v["repeat"]], marker=mk, ms=7, lw=1.5, **ring(),
                 label=label_of(k, tests))
     ax.set_yscale("log")
-    ax.set_ylim(5e-5, 2e-2)
+    ax.set_ylim(5e-5, 4.0)
     ax.axhline(6e-5, color=AXIS, lw=0.6)
     ax.text(ROBUST_THETA[0], 6.6e-5, "not reached", fontsize=7.6, color=INK2)
     ax.set_xticks(ROBUST_THETA)
     ax.set_xlabel("Criterion dT (K), held 30 s")
     ax.set_ylabel("a = dT / t²  (K/s²)")
     ax.set_title("(a) Equivalent t² coefficient vs. criterion level")
-    ax.legend(fontsize=7.6, loc="upper right", ncol=2)
+    ax.legend(fontsize=7.4, loc="center", bbox_to_anchor=(0.5, 0.64), ncol=2)
     ax = axs[1]
     R = np.array([rob["ranks"][key] for key in rob["variants"]])  # variants x tests
     prim = rob["ranks"][rob["primary"]]
@@ -744,7 +779,7 @@ def write_csv(path, rows):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("xlsx", nargs="*", type=Path,
-                    default=[HERE / "data" / n for n in ("EPS.xlsx", "PF.xlsx", "PIR_SC_2_max.xlsx")])
+                    default=[HERE / "data" / n for n in ("EPS.xlsx", "PF.xlsx", "PIR.xlsx")])
     args = ap.parse_args()
     figs, res = HERE / "figures", HERE / "results"
     figs.mkdir(exist_ok=True)
