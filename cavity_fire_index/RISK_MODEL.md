@@ -165,6 +165,7 @@ TRP(Thermal Response Parameter, Tewarson)는 ΔT_ig와 kρc를 하나로 묶은 
    - 필수: 콘칼로리미터(KS F ISO 5660-1) 착화시간 t_ig, 최대열방출률 pHRR, 총방출열량 THR
    - 권장: 열유속 3–4개에서의 t_ig. 이것으로 TRP를 회귀로 구합니다(열을 `TRP_kW_s05_m2`에 직접 넣으면 그 값을 우선 사용).
    - 참고: k, ρ, c, T_ig(제품 성적서). TRP_nominal로 계산되어 비교에 쓰입니다.
+   - 주의: 카탈로그 k·ρ·c로 계산한 TRP_nominal은 중공층 시험에서 역산한 시스템 착화 저항(TRP_eff)보다 60–120배 작습니다([연계 분석](../coupled_analysis/README.md)). TRP_nominal은 비교용으로만 쓰고, 예측에는 콘칼로리미터 TRP를 쓰십시오.
 2. `python risk_model.py` 실행 → `results/risk_model.csv`
    - K 보정: log(1/√t₆₀₀) − log M의 평균
    - 재료별 예측 t̂₆₀₀, α̂₆₀₀, FRI, 등급
