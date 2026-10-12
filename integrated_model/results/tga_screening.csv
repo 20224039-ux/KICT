@@ -1,0 +1,7 @@
+material,label_ko,cavity_tests,r_max_air,r_max_air_hr,f400_air,f400_air_hr,type,B_hat,screen_result,P_measured,R_measured,flags_measured,measured,t_sp_hat_s,t600_hat_s,t600_hat_lo_s,t600_hat_hi_s,alpha600_hat_K_s2,FRI_hat,P_hat,P_hat_range
+EPS_C,EPS 가연성,0,2.4377,0.4041,0.026,0.0056,melt-back,,melt-back type (check flag A),,,,,,,,,,,,
+EPS_SC,EPS 준불연,3,1.0224,0.0423,0.3333,0.0171,melt-back,,melt-back type (check flag A),2/1/2,4/1/2,A,"P = 2/1/2, R = 4/1/2, flags A",,,,,,,,
+PIR_C,PIR(PUR) 가연성,0,0.7496,0.0019,0.6655,0.0029,charring,B,"P̂ = 3, B̂",,,,,557.402,777.402,699.1614,855.6427,0.001,1.1577,3.0,3-3
+PIR_SC,PIR(PUR) 준불연,1,0.5752,0.0559,0.6288,0.007,charring,,P̂ = 2,2,6,-,"P = 2, R = 6, flags -",726.4057,946.4057,844.4425,1048.3689,0.0007,0.951,2.0,2-3
+PF_out,PF 외장용,2,0.4064,0.0026,0.7032,0.0008,charring,B,"P̂ = 2, B̂",2/2,4/4,B,"P = 2/2, R = 4/4, flags B",1028.1215,1248.1215,1103.8075,1392.4355,0.0004,0.7211,2.0,2-2
+PF_in,PF 내장용,2,1.1737,0.0078,0.6512,0.0031,charring,B,"P̂ = 3, B̂",3/3,12/12,B,"P = 3/3, R = 12/12, flags B",355.9926,575.9926,526.0231,625.9621,0.0018,1.5625,3.0,3-3
