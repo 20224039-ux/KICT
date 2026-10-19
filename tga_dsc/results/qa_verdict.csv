@@ -1,0 +1,13 @@
+atmosphere,material,signal_mg,gain_pct,end_rate_pct,temp_rep_C,rate_rep,sep_r_max,sep_f400,dsc_event,alpha150_pct,v_signal,v_gain,v_end,v_temp_rep,v_rate_rep,v_rank,v_dsc,overall
+N2,EPS_C,0.8744,1.6313,0.0705,6.0371,0.1369,4.1288,4.4333,"399/398 °C, +0.8/+1.2 mW",1.7729,fair,good,good,good,fair,good,fair,conditional
+N2,EPS_SC,0.6579,3.191,1.1339,3.7338,0.0238,16.2817,4.526,"621/436 °C, -1.1/+0.3 mW",0.9265,fair,fair,good,good,good,good,poor,conditional
+N2,PF_in,2.0741,0.1613,64.5925,23.1863,0.1023,0.9479,2.2611,"254/712 °C, -1.1/-0.2 mW",4.9278,good,good,poor,fair,fair,poor,poor,endpoint
+N2,PF_out,1.5752,0.304,102.3599,42.2569,0.0973,0.9079,2.4063,"694/574 °C, +0.2/-0.2 mW",3.9387,good,good,poor,poor,good,poor,poor,endpoint
+N2,PIR_C,1.998,0.411,25.4704,7.0,0.0105,23.7975,2.3092,"679/612 °C, -0.5/-2.4 mW",1.5661,good,good,poor,good,good,good,poor,endpoint
+N2,PIR_SC,1.1484,1.0466,40.9591,8.5,0.1083,3.0696,1.9036,"622/720 °C, +2.3/+0.4 mW",3.6187,good,good,poor,good,fair,good,poor,endpoint
+oxidative (O),EPS_C,0.1567,17.1552,-1.7294,6.1639,0.3315,1.564,27.6232,"720/706 °C, +0.2/+0.3 mW",-8.0954,poor,poor,good,good,poor,fair,poor,remeasure
+oxidative (O),EPS_SC,1.1212,2.5379,40.4758,3.0,0.0827,1.7909,8.651,"508/720 °C, -1.1/-1.4 mW",-0.1631,good,fair,poor,good,good,fair,poor,endpoint
+oxidative (O),PF_in,1.2668,0.1215,0.2032,1.2101,0.0132,9.7447,2.3051,"474/474 °C, -8.9/-17.9 mW",3.2579,good,good,good,good,good,good,fair,reliable
+oxidative (O),PF_out,1.6442,0.2349,2.3207,3.0,0.013,31.8883,24.0183,"711/620 °C, -1.5/-1.1 mW",1.985,good,good,good,good,good,good,poor,reliable
+oxidative (O),PIR_C,1.2564,1.3539,-0.4566,2.5,0.005,46.8696,2.4296,"501/522 °C, -0.9/-1.1 mW",0.0416,good,good,good,good,good,good,poor,reliable
+oxidative (O),PIR_SC,1.5863,0.9482,11.9726,23.4961,0.1945,1.5093,1.6083,"558/548 °C, +1.1/+1.7 mW",1.2002,good,good,fair,fair,fair,fair,poor,conditional

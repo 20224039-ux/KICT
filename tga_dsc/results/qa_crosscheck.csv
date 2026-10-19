@@ -1,0 +1,79 @@
+check,atmosphere,material,value,reference,diff,diff_pct
+summary mean r_max_pct_C,N2,EPS_C,2.6483,2.6483,0.0,0.0011
+summary mean T_peak_C,N2,EPS_C,397.25,397.25,0.0,0.0
+summary mean f_above400,N2,EPS_C,0.279,0.279,-0.0,-0.0119
+summary mean T_a50_C,N2,EPS_C,391.75,391.75,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,N2,EPS_C,2.5749,2.6483,-0.0735,-2.7738
+T_peak: Savitzky-Golay vs 10 °C central difference,N2,EPS_C,397.0,397.25,-0.25,-0.0629
+summary mean r_max_pct_C,N2,EPS_SC,1.1513,1.1513,-0.0,-0.0031
+summary mean T_peak_C,N2,EPS_SC,424.5,424.5,0.0,0.0
+summary mean f_above400,N2,EPS_SC,0.5378,0.5378,-0.0,-0.0092
+summary mean T_a50_C,N2,EPS_SC,404.0,404.0,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,N2,EPS_SC,1.1401,1.1513,-0.0111,-0.9683
+T_peak: Savitzky-Golay vs 10 °C central difference,N2,EPS_SC,424.0,424.5,-0.5,-0.1178
+summary mean r_max_pct_C,N2,PF_in,0.2491,0.2491,-0.0,-0.0192
+summary mean T_peak_C,N2,PF_in,610.75,610.75,0.0,0.0
+summary mean f_above400,N2,PF_in,0.7167,0.7167,-0.0,-0.0018
+summary mean T_a50_C,N2,PF_in,546.25,546.25,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,N2,PF_in,0.2473,0.2491,-0.0017,-0.6984
+T_peak: Savitzky-Golay vs 10 °C central difference,N2,PF_in,598.75,610.75,-12.0,-1.9648
+summary mean r_max_pct_C,N2,PF_out,0.2732,0.2732,-0.0,-0.0013
+summary mean T_peak_C,N2,PF_out,745.0,745.0,0.0,0.0
+summary mean f_above400,N2,PF_out,0.6352,0.6352,-0.0,-0.004
+summary mean T_a50_C,N2,PF_out,543.75,543.75,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,N2,PF_out,0.2657,0.2732,-0.0074,-2.7263
+T_peak: Savitzky-Golay vs 10 °C central difference,N2,PF_out,746.0,745.0,1.0,0.1342
+summary mean r_max_pct_C,N2,PIR_C,0.7048,0.7048,0.0,0.0002
+summary mean T_peak_C,N2,PIR_C,316.5,316.5,0.0,0.0
+summary mean f_above400,N2,PIR_C,0.4603,0.4603,-0.0,-0.0037
+summary mean T_a50_C,N2,PIR_C,374.0,374.0,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,N2,PIR_C,0.6978,0.7048,-0.007,-0.9942
+T_peak: Savitzky-Golay vs 10 °C central difference,N2,PIR_C,315.25,316.5,-1.25,-0.3949
+summary mean r_max_pct_C,N2,PIR_SC,0.5289,0.5289,0.0,0.0019
+summary mean T_peak_C,N2,PIR_SC,328.25,328.25,0.0,0.0
+summary mean f_above400,N2,PIR_SC,0.4298,0.4298,0.0,0.0
+summary mean T_a50_C,N2,PIR_SC,362.25,362.25,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,N2,PIR_SC,0.5167,0.5289,-0.0123,-2.3174
+T_peak: Savitzky-Golay vs 10 °C central difference,N2,PIR_SC,330.0,328.25,1.75,0.5331
+summary mean r_max_pct_C,oxidative (O),EPS_C,2.4377,2.4377,-0.0,-0.0016
+summary mean T_peak_C,oxidative (O),EPS_C,296.25,296.25,0.0,0.0
+summary mean f_above400,oxidative (O),EPS_C,0.026,0.026,-0.0,-0.0685
+summary mean T_a50_C,oxidative (O),EPS_C,298.75,298.75,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,oxidative (O),EPS_C,2.3602,2.4377,-0.0774,-3.1766
+T_peak: Savitzky-Golay vs 10 °C central difference,oxidative (O),EPS_C,294.75,296.25,-1.5,-0.5063
+summary mean r_max_pct_C,oxidative (O),EPS_SC,1.0224,1.0224,-0.0,-0.0011
+summary mean T_peak_C,oxidative (O),EPS_SC,343.0,343.0,0.0,0.0
+summary mean f_above400,oxidative (O),EPS_SC,0.3333,0.3333,0.0,0.0031
+summary mean T_a50_C,oxidative (O),EPS_SC,350.75,350.75,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,oxidative (O),EPS_SC,1.0094,1.0224,-0.013,-1.2752
+T_peak: Savitzky-Golay vs 10 °C central difference,oxidative (O),EPS_SC,344.25,343.0,1.25,0.3644
+summary mean r_max_pct_C,oxidative (O),PF_in,1.1737,1.1737,0.0,0.0031
+summary mean T_peak_C,oxidative (O),PF_in,472.25,472.25,0.0,0.0
+summary mean f_above400,oxidative (O),PF_in,0.6512,0.6512,0.0,0.0055
+summary mean T_a50_C,oxidative (O),PF_in,428.25,428.25,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,oxidative (O),PF_in,1.1368,1.1737,-0.0369,-3.148
+T_peak: Savitzky-Golay vs 10 °C central difference,oxidative (O),PF_in,471.25,472.25,-1.0,-0.2118
+summary mean r_max_pct_C,oxidative (O),PF_out,0.4064,0.4064,-0.0,-0.0022
+summary mean T_peak_C,oxidative (O),PF_out,489.5,489.5,0.0,0.0
+summary mean f_above400,oxidative (O),PF_out,0.7032,0.7032,0.0,0.0015
+summary mean T_a50_C,oxidative (O),PF_out,459.75,459.75,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,oxidative (O),PF_out,0.3986,0.4064,-0.0078,-1.9209
+T_peak: Savitzky-Golay vs 10 °C central difference,oxidative (O),PF_out,490.75,489.5,1.25,0.2554
+summary mean r_max_pct_C,oxidative (O),PIR_C,0.7496,0.7496,0.0,0.0049
+summary mean T_peak_C,oxidative (O),PIR_C,525.25,525.25,0.0,0.0
+summary mean f_above400,oxidative (O),PIR_C,0.6655,0.6655,0.0,0.0057
+summary mean T_a50_C,oxidative (O),PIR_C,479.75,479.75,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,oxidative (O),PIR_C,0.7441,0.7496,-0.0055,-0.7377
+T_peak: Savitzky-Golay vs 10 °C central difference,oxidative (O),PIR_C,525.25,525.25,0.0,0.0
+summary mean r_max_pct_C,oxidative (O),PIR_SC,0.5752,0.5752,0.0,0.0085
+summary mean T_peak_C,oxidative (O),PIR_SC,532.0,532.0,0.0,0.0
+summary mean f_above400,oxidative (O),PIR_SC,0.6288,0.6288,-0.0,-0.0051
+summary mean T_a50_C,oxidative (O),PIR_SC,472.0,472.0,0.0,0.0
+r_max: Savitzky-Golay vs 10 °C central difference,oxidative (O),PIR_SC,0.5535,0.5752,-0.0218,-3.7849
+T_peak: Savitzky-Golay vs 10 °C central difference,oxidative (O),PIR_SC,529.75,532.0,-2.25,-0.4229
+"Spearman r_max(air) vs spread speed, sc 4 materials",oxidative (O),endpoint 700 °C,0.8,,,
+"Spearman r_max(air) vs spread speed, 5 materials incl. PIR_C",oxidative (O),endpoint 700 °C,0.6,,,
+"Spearman r_max(air) vs spread speed, sc 4 materials",oxidative (O),endpoint 750 °C,1.0,,,
+"Spearman r_max(air) vs spread speed, 5 materials incl. PIR_C",oxidative (O),endpoint 750 °C,0.7,,,
+"Spearman r_max(air) vs spread speed, sc 4 materials",oxidative (O),endpoint 790 °C,1.0,,,
+"Spearman r_max(air) vs spread speed, 5 materials incl. PIR_C",oxidative (O),endpoint 790 °C,0.7,,,

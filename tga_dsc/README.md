@@ -140,6 +140,33 @@
 - [ ] 가열속도 2–3개 추가(예: 10·20 °C/min). Kissinger·Ozawa 방법으로 활성화에너지를 구해 열분해 모델에 쓸 수 있습니다.
 - [ ] 시료 채취 위치(심재 / 표면층)와 준불연 처리 방식
 
+## 6. 데이터 신뢰성 점검과 추가 실험 판단
+
+원자료 24개를 6개 항목으로 점검했습니다(`qa_reliability.py`). 항목은 신호량, 겉보기 증가, 종점 잔여, 온도 반복, 속도 반복, 순위 분리도이고, 판정 기준은 이 분석의 자체 기준입니다.
+
+- 분석 자료(PPT 16쪽, 발표자 노트 포함): [`report/TGA-DSC_종합분석_신뢰성평가.pptx`](report/TGA-DSC_종합분석_신뢰성평가.pptx)
+- 분석 노트(입력 자료 · 산정 식 · 검산 · 해석 · 슬라이드 구성): [`report/TGA-DSC_종합분석_분석노트.md`](report/TGA-DSC_종합분석_분석노트.md)
+
+| 판정 (12개 조합) | 조합 | 뜻 |
+|---|---|---|
+| 신뢰 3 | 공기 PF 내부용 · PF 외부용 · PIR(PUR) 가연성 | 6개 점검 모두 양호 |
+| 조건부 3 | N₂ EPS 가연성 · 준불연, 공기 PIR(PUR) 준불연 | 값에 반복 범위를 함께 표기 |
+| 종점 의존 5 | N₂ PIR(PUR) 2종 · PF 2종, 공기 EPS 준불연 | 790 °C에서도 분해 중 → r_max · T_α50 · T_α90 · f₄₀₀가 종점에 따라 변함 |
+| 재측정 1 | 공기 EPS 가연성 | 질량감소 0.16 · 0.30 mg, 겉보기 증가 17 · 10 % |
+
+- DSC는 교정·기준선 보정 없이 기록된 정성 자료입니다. 두 반복에서 재현된 사건은 2건입니다.
+  - PF 내부용 공기 474 °C 발열
+  - EPS 가연성 N₂ 398 °C 흡열
+- 기존 결론에 대한 영향
+  - PF 내부용의 공기 중 급속 전소와 PIR(PUR) 가연성 예외는 그대로 유효합니다.
+  - 준불연 4종의 순위 일치(ρ = 1.0)는 조건부입니다. 근거는 두 가지입니다.
+    - 700 °C로 정규화하면 ρ = 0.8입니다.
+    - 순위상 이웃 재료와의 분리도가 1.5–1.8입니다.
+- **추가 실험: 필요하지만 표적 보완**입니다. 필수 10회와 기록 확인 4건(위 5절 항목)이면 되고, 전면 재시험은 필요 없습니다.
+  - 블랭크 N₂ · 공기 2회
+  - EPS 가연성 공기 재측정 3회
+  - 공기 3번째 반복 5회 (800 °C 등온 30분 포함)
+
 ---
 
 ## 부록: 재현 방법과 산출물
@@ -147,6 +174,9 @@
 ```bash
 cd tga_dsc
 python analysis.py                  # data/N/*.csv, data/O/*.csv  →  figures/, results/
+python qa_reliability.py            # 신뢰성 점검  →  results/qa_*.csv
+python report/deck_data.py          # 덱 숫자 · 곡선  →  report/deck_data.json
+NODE_PATH=<pptxgenjs 위치> node report/build_deck.js   # →  report/TGA-DSC_종합분석_신뢰성평가.pptx
 ```
 
 - 원자료(`data/`)는 공개 저장소이므로 커밋하지 않습니다(`.gitignore`). 압축을 풀어 `data/N`, `data/O`에 넣으면 됩니다.
@@ -156,3 +186,8 @@ python analysis.py                  # data/N/*.csv, data/O/*.csv  →  figures/,
   - `tga_summary.csv` – 재료 × 분위기 평균과 반복 간 반폭
   - `fire_link.csv` – 재료별 중공층 지표와 TGA 지표
   - `fire_link_rank.csv` – TGA 지표별 Spearman 순위상관(확산속도, D₆₀₀)
+  - `qa_runs.csv` – 시험별 점검값(질량 읽음값 · 총 감소 · 잡음 · 겉보기 증가 · 종점 잔여 · 승온속도 · 온도차 · 자기발열 · 유량 · 열류)
+  - `qa_replicates.csv` – 재료 × 분위기별 반복 차이와 순위 분리도
+  - `qa_endpoint.csv` – 700 · 750 · 790 °C 정규화 지표
+  - `qa_crosscheck.csv` – 요약표 · 미분 방법 교차검산, 종점별 중공층 순위상관
+  - `qa_verdict.csv` – 조합별 점검 판정과 종합 판정(`overall`)
