@@ -167,6 +167,48 @@
   - EPS 가연성 공기 재측정 3회
   - 공기 3번째 반복 5회 (800 °C 등온 30분 포함)
 
+
+## 7. PyroSim(FDS) 입력값과 재료 특성 그래프
+
+**밀도·비열은 이 TGA–DSC 자료로 구할 수 없습니다.** TGA는 질량 변화의 비율만 재고(시료 초기 질량 기록 없음), DSC는 교정·블랭크 없이 기록됐습니다. 그래서 시료의 현열 신호(약 0.1–0.35 mW)가 열류 기준선 이동(111–180 mW)에 묻힙니다. 대신 TGA는 PyroSim 재료의 **열분해 반응 입력**에 바로 씁니다.
+
+- 분석 자료(PPT 17쪽, 발표자 노트 포함): [`report/TGA-DSC_재료특성그래프_PyroSim입력.pptx`](report/TGA-DSC_재료특성그래프_PyroSim입력.pptx)
+- 입력표(엑셀): [`report/PyroSim_입력값_정리.xlsx`](report/PyroSim_입력값_정리.xlsx)
+  - MATL 입력값, 반응 파라미터(수식), 밀도·비열 측정 기록표, FDS `TGA_ANALYSIS` 비교용 측정 곡선이 들어 있습니다.
+- 그림: [`figures/material_tga.png`](figures/material_tga.png)(6종 TGA), [`figures/material_dsc.png`](figures/material_dsc.png)(6종 DSC), `figures/material_<재료>.png`(재료별 특성 6장)
+
+| PyroSim 항목 (FDS 키워드) | 이 자료로 | 값을 얻는 방법 |
+|---|---|---|
+| 밀도 (`DENSITY`) | 불가 | 보드 실측(KS M ISO 845) 또는 시험성적서. 임시 15–60 kg/m³ |
+| 비열 (`SPECIFIC_HEAT`) | 불가 | 같은 STA로 사파이어법(ASTM E1269 / ISO 11357-4). 임시 1.3–1.5 kJ/(kg·K) |
+| 열전도율 (`CONDUCTIVITY`) | 불가 | 시험성적서(KS L 9016 / ISO 8301). 임시 0.018–0.040 W/(m·K) |
+| 반응 기준온도·기준속도 (`REFERENCE_TEMPERATURE`, `REFERENCE_RATE`, `HEATING_RATE` = 5) | 가능 | DTG 피크 온도, 5 K/min × 피크 속도 ÷ 단계 몫 |
+| 잔류물 수율 (`NU_MATL`) | 기록 필요 | 시료 초기 질량 기록으로 계산 |
+| 반응열 (`HEAT_OF_REACTION`) | 부호만 | 교정 DSC 또는 문헌 |
+
+- 기준속도는 FDS의 정의(반응하는 성분의 정규화 속도, `read.f90`: E = e·r_p·R·T_p²/β)를 따릅니다. 이 자료의 전환율은 790 °C까지의 감소량으로 정규화했으므로, 단계의 몫으로 나누면 초기 질량 없이 구해집니다(`pyrosim_inputs.py`).
+- 반응 1(N₂ 열분해)의 기준온도와 기준속도는 다음과 같습니다.
+
+  | 재료 | 기준온도 | 기준속도 |
+  |---|---|---|
+  | EPS 가연성 | 397 °C | 2.25×10⁻³ 1/s |
+  | EPS 준불연 | 426 °C | 9.66×10⁻⁴ 1/s |
+  | PIR(PUR) 가연성 | 315 °C | 9.00×10⁻⁴ 1/s |
+  | PIR(PUR) 준불연 | 332 °C | 7.05×10⁻⁴ 1/s |
+  | PF 외부용 | 302 °C | 4.28×10⁻⁴ 1/s |
+  | PF 내부용 | 300 °C | 5.06×10⁻⁴ 1/s |
+
+- 반응 2(공기 탄화층 산화)는 PIR(PUR)과 PF에만 있습니다.
+  - 기준온도: PIR(PUR) 가연성 524 °C, PIR(PUR) 준불연 534 °C, PF 외부용 488 °C, PF 내부용 472 °C입니다.
+  - 산소 의존(`N_O2` = 1)으로 넣을 때는 A를 0.209로 나눠 A·E를 직접 입력합니다. 이는 O 가스가 공기일 때의 처리입니다.
+- **주의**: 카탈로그 물성만 넣은 맨 단열재는 시험보다 훨씬 빨리 착화합니다.
+  - 기존 역산에서 모델 표면은 16–51 s에 분해온도에 도달했지만, 준불연 시험의 착화는 188–288 s였습니다.
+  - 따라서 면재·마감층을 함께 모델링하고 중공층 시험으로 검증해야 합니다.
+
+![재료별 TGA](figures/material_tga.png)
+
+![재료별 DSC](figures/material_dsc.png)
+
 ---
 
 ## 부록: 재현 방법과 산출물
@@ -175,8 +217,12 @@
 cd tga_dsc
 python analysis.py                  # data/N/*.csv, data/O/*.csv  →  figures/, results/
 python qa_reliability.py            # 신뢰성 점검  →  results/qa_*.csv
+python pyrosim_inputs.py            # PyroSim 반응 입력  →  results/pyrosim_*.csv, report/pyrosim_data.json
+python material_figures.py          # 재료 특성 그림  →  figures/material_*.png
 python report/deck_data.py          # 덱 숫자 · 곡선  →  report/deck_data.json
-NODE_PATH=<pptxgenjs 위치> node report/build_deck.js   # →  report/TGA-DSC_종합분석_신뢰성평가.pptx
+python report/build_pyrosim_xlsx.py # 엑셀 입력표 (수식 값은 LibreOffice 재계산 후 채워짐)
+NODE_PATH=<pptxgenjs 위치> node report/build_deck.js           # →  report/TGA-DSC_종합분석_신뢰성평가.pptx
+NODE_PATH=<pptxgenjs 위치> node report/build_pyrosim_deck.js   # →  report/TGA-DSC_재료특성그래프_PyroSim입력.pptx
 ```
 
 - 원자료(`data/`)는 공개 저장소이므로 커밋하지 않습니다(`.gitignore`). 압축을 풀어 `data/N`, `data/O`에 넣으면 됩니다.
@@ -191,3 +237,5 @@ NODE_PATH=<pptxgenjs 위치> node report/build_deck.js   # →  report/TGA-DSC_�
   - `qa_endpoint.csv` – 700 · 750 · 790 °C 정규화 지표
   - `qa_crosscheck.csv` – 요약표 · 미분 방법 교차검산, 종점별 중공층 순위상관
   - `qa_verdict.csv` – 조합별 점검 판정과 종합 판정(`overall`)
+  - `pyrosim_reactions.csv` – 재료 × 분위기 × 단계별 기준온도·기준속도·FDS 환산 A·E
+  - `pyrosim_tga_curves.csv` – FDS `TGA_ANALYSIS` 결과와 비교할 측정 곡선(두 반복 평균)
