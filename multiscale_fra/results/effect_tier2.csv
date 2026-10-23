@@ -1,0 +1,7 @@
+material,label,family,fuel,cladding,ignition,vertical,likelihood,consequence,outcome
+EPS_C,EPS 가연성,SPF/XPS/EPS/PUR,High,Low (불연 가정),Medium (외벽 하부 발화원),연결 > 3 m → 한 단계 상향,High,"Moderate–Extreme (주거 all-out, 30–50 m)",D (Substantial)
+EPS_SC,EPS 준불연,SPF/XPS/EPS/PUR,High,Low (불연 가정),Medium (외벽 하부 발화원),연결 > 3 m → 한 단계 상향,High,"Moderate–Extreme (주거 all-out, 30–50 m)",D (Substantial)
+PIR_C,PIR(PUR) 가연성,PIR/Phenolic 또는 PUR,High,Low (불연 가정),Medium (외벽 하부 발화원),연결 > 3 m → 한 단계 상향,High,"Moderate–Extreme (주거 all-out, 30–50 m)",D (Substantial)
+PIR_SC,PIR(PUR) 준불연,PIR/Phenolic 또는 PUR,High,Low (불연 가정),Medium (외벽 하부 발화원),연결 > 3 m → 한 단계 상향,High,"Moderate–Extreme (주거 all-out, 30–50 m)",D (Substantial)
+PF_out,PF 준불연 외부용,PIR/Phenolic,High,Low (불연 가정),Medium (외벽 하부 발화원),연결 > 3 m → 한 단계 상향,High,"Moderate–Extreme (주거 all-out, 30–50 m)",D (Substantial)
+PF_in,PF 준불연 내부용,PIR/Phenolic,High,Low (불연 가정),Medium (외벽 하부 발화원),연결 > 3 m → 한 단계 상향,High,"Moderate–Extreme (주거 all-out, 30–50 m)",D (Substantial)
