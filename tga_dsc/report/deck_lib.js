@@ -36,10 +36,13 @@ const STATUS = {
 };
 const W = 13.333, MX = 0.5, CW = 12.333;
 
-function makeDeck({ title, subject, footer }) {
+// options beyond title/subject/footer: themeName (written into the theme), author, subs (extra subscript tokens,
+// e.g. { R_S: ["R", "S"] }) -- the defaults keep the TGA-DSC decks byte-for-byte the same
+function makeDeck({ title, subject, footer, themeName, author, subs }) {
+  const theme = themeName ? { ...THEME, name: themeName } : THEME;
   const pres = new pptxgen();
   pres.layout = "LAYOUT_WIDE";
-  pres.author = "KICT 중공층 외단열 화재 분석";
+  pres.author = author || "KICT 중공층 외단열 화재 분석";
   pres.title = title;
   pres.subject = subject;
   pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
@@ -73,7 +76,7 @@ function makeDeck({ title, subject, footer }) {
   // fall back to another font); speaker notes keep the plain spelling
   const SUBS = { T_onset: ["T", "onset"], T_peak: ["T", "peak"], "T_α50": ["T", "α50"], "T_α90": ["T", "α90"], "T_α5": ["T", "α5"],
     T_lo: ["T", "lo"], r_max: ["r", "max"], W_ref: ["W", "ref"], W_end: ["W", "end"], c_p: ["c", "p"], "N₂": ["N", "2"], "O₂": ["O", "2"],
-    "f₄₀₀": ["f", "400"], "SG₁₀₀": ["SG", "100"], "t₆₀₀": ["t", "600"] };
+    "f₄₀₀": ["f", "400"], "SG₁₀₀": ["SG", "100"], "t₆₀₀": ["t", "600"], ...(subs || {}) };
   const SUB_RE = new RegExp("(?<![A-Za-z_])(" + Object.keys(SUBS).sort((a, b) => b.length - a.length).join("|") + ")", "g");
   function rich(str, base = {}) {
     if (typeof str !== "string" || !SUB_RE.test(str)) return str;
@@ -214,10 +217,10 @@ function makeDeck({ title, subject, footer }) {
   async function finish(file) {
     const zip = await JSZip.loadAsync(fs.readFileSync(file));
     const slots = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
-    const scheme = `<a:clrScheme name="${THEME.name}">` + slots.map((k) => `<a:${k}><a:srgbClr val="${THEME.colors[k]}"/></a:${k}>`).join("") + "</a:clrScheme>";
+    const scheme = `<a:clrScheme name="${theme.name}">` + slots.map((k) => `<a:${k}><a:srgbClr val="${theme.colors[k]}"/></a:${k}>`).join("") + "</a:clrScheme>";
     const tp = "ppt/theme/theme1.xml";
     zip.file(tp, (await zip.file(tp).async("string")).replace(/<a:clrScheme\b[\s\S]*?<\/a:clrScheme>/, () => scheme)
-      .replace(/(<a:(?:theme|fontScheme)\b[^>]*?\bname=")[^"]*"/g, (_, head) => `${head}${THEME.name}"`));
+      .replace(/(<a:(?:theme|fontScheme)\b[^>]*?\bname=")[^"]*"/g, (_, head) => `${head}${theme.name}"`));
     const styleSeries = (ser) => {
       const nm = ((ser.match(/<c:tx>[\s\S]*?<c:v>([\s\S]*?)<\/c:v>/) || [])[1] || "").replace(/&amp;/g, "&");
       const st = SER_STYLE.get(nm);
@@ -226,6 +229,13 @@ function makeDeck({ title, subject, footer }) {
       if (st.dash) out = out.replace('<a:prstDash val="solid"/>', `<a:prstDash val="${st.dash}"/>`);
       if (st.noLine) out = out.replace(/(<c:spPr>[\s\S]*?)<a:ln w="[^"]*"[^>]*>[\s\S]*?<\/a:ln>/, "$1<a:ln><a:noFill/></a:ln>");
       if (st.noMarker) out = out.replace(/<c:marker>[\s\S]*?<\/c:marker>/, '<c:marker><c:symbol val="none"/></c:marker>');
+      if (st.marker) {   // { symbol, size, fill (hex or "none"), line (hex), lineW (EMU) }
+        const mk = st.marker;
+        const fill = mk.fill === "none" ? "<a:noFill/>" : `<a:solidFill><a:srgbClr val="${mk.fill}"/></a:solidFill>`;
+        const xml = `<c:marker><c:symbol val="${mk.symbol || "circle"}"/><c:size val="${mk.size || 7}"/><c:spPr>${fill}` +
+          `<a:ln w="${mk.lineW || 19050}"><a:solidFill><a:srgbClr val="${mk.line || mk.fill}"/></a:solidFill></a:ln></c:spPr></c:marker>`;
+        out = out.replace(/<c:marker>[\s\S]*?<\/c:marker>/, xml);
+      }
       return out;
     };
     const firstPPr = (xml) => xml.replace(/<a:p>([\s\S]*?)<\/a:p>/g, (whole, inner) => {

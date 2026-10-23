@@ -1,0 +1,14 @@
+test,material,label,grade,t600_s,flag_B,used,note
+EPS_C-1,EPS_C,EPS 가연성,c,,0,False,"기록 240 s – t₆₀₀ 산정 불가, 정량평가 제외(재시험 필요, 6.2.1.3)"
+EPS_C-2,EPS_C,EPS 가연성,c,,0,False,"기록 262 s – t₆₀₀ 산정 불가, 정량평가 제외(재시험 필요, 6.2.1.3)"
+EPS_SC-1,EPS_SC,EPS 준불연,sc,962.0,0,True,
+EPS_SC-2,EPS_SC,EPS 준불연,sc,,0,True,30분 안에 3000 mm 600 K 미도달 → 이 사건은 층간 확산 없음
+EPS_SC-3,EPS_SC,EPS 준불연,sc,975.0,0,True,
+PIR_C-1,PIR_C,PIR(PUR) 가연성,c,31.0,0,True,전체 화염(30 s): 소화 전에 연료 소진 → 플래그 B 판정 대상 아님
+PIR_C-2,PIR_C,PIR(PUR) 가연성,c,29.0,0,True,전체 화염(30 s): 소화 전에 연료 소진 → 플래그 B 판정 대상 아님
+PIR_SC-1,PIR_SC,PIR(PUR) 준불연,sc,1068.0,0,True,
+PIR_SC-2,PIR_SC,PIR(PUR) 준불연,sc,1091.0,0,True,
+PF_out-1,PF_out,PF 준불연 외부용,sc,1245.0,1,True,
+PF_out-2,PF_out,PF 준불연 외부용,sc,1455.0,1,True,
+PF_in-1,PF_in,PF 준불연 내부용,sc,556.0,0,True,
+PF_in-2,PF_in,PF 준불연 내부용,sc,472.0,1,True,
