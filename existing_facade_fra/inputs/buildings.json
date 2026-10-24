@@ -1,0 +1,67 @@
+{
+  "note": "가상 예제 건물 3동 — 국내 기축 건물의 대표 형태(필로티 다세대, 중층 아파트, 고층 주상복합). 구간(zone) 입력: col = 수직으로 이어진 입면 열, b·t = 시작·끝 층, n_u = 이 구간에 창을 낸 층당 세대 수, area = 층당 비주거 면적(m²), occ_band = 외벽 화재가 한 층에 닿을 때 노출되는 재실자(확산 띠 세대 × 세대당 인원 × 실내 유입), win = 창 계수(보통 1 · 적음 0.4 · 없음 0), ext = 외벽 하단 외부 화원",
+  "buildings": [
+    {
+      "id": "A",
+      "name": "필로티 다세대주택",
+      "form": "5층 · 1층 필로티 주차 8면 · 외단열 미장(드라이비트)",
+      "N": 5, "h": 2.8, "permit": "2013", "use": "공동주택(다세대)",
+      "sprinkler": false,
+      "piloti": {"soffit_combustible": true, "ground_compartment": false},
+      "zones": [
+        {"id": "A1", "name": "전면(필로티 위)", "col": "전면", "b": 2, "t": 5, "type": "ETICS_EPS_C", "use": "res",
+         "n_u": 2, "occ_band": 5, "win": 1.0, "ext": [{"src": "piloti", "count": 8}],
+         "evidence": "E2", "note": "시료: FT-IR EPS(난연제 미검출) · 콘 준불연 기준 미달 → 가연"},
+        {"id": "A2", "name": "측·후면", "col": "후면", "b": 2, "t": 5, "type": "ETICS_EPS_C", "use": "res",
+         "n_u": 2, "occ_band": 5, "win": 0.4, "ext": [{"src": "adjacent", "count": 1}],
+         "evidence": "E2", "note": "같은 시스템(시료 같은 결과)"}
+      ]
+    },
+    {
+      "id": "B",
+      "name": "15층 아파트",
+      "form": "15층 · 건식 마감 + 중공층(PIR 계열) · 스프링클러",
+      "N": 15, "h": 2.9, "permit": "2016", "use": "공동주택(아파트)",
+      "sprinkler": true,
+      "piloti": null,
+      "zones": [
+        {"id": "B1", "name": "전·후면(세대 창)", "col": "주동", "b": 1, "t": 15, "type": "CAV_PIR_SC", "use": "res",
+         "n_u": 4, "occ_band": 5, "win": 1.0, "ext": [{"src": "adjacent", "count": 1}],
+         "evidence": "E3", "note": "중공층 시험 2회(t₆₀₀ · 자립연소)"},
+        {"id": "B2", "name": "측벽(창 거의 없음)", "col": "측벽", "b": 1, "t": 15, "type": "CAV_PIR_SC", "use": "res",
+         "n_u": 0, "occ_band": 1, "win": 0.0, "ext": [{"src": "adjacent", "count": 1}],
+         "evidence": "E3", "note": "같은 시스템 · 끝 세대(층당 2세대 × 2.5명 × 실내 유입 0.2)"}
+      ],
+      "evidence_levels": {
+        "E0": {"zones": {"B1": {"type": "SC_UNKNOWN"}, "B2": {"type": "SC_UNKNOWN"}},
+               "note": "사진·건축물대장: 금속 패널 마감, 허가 2016년(6층 이상) → 준불연 추정, 보수값"},
+        "E1": {"zones": {"B1": {"type": "SC_UNKNOWN"}, "B2": {"type": "SC_UNKNOWN"}},
+               "note": "현장: 패널 뒤 공기층 + PIR 계열 단열재, 등급 표시 없음 → 준불연 보수값 유지"},
+        "E2": {"zones": {"B1": {"tga": {"r_max_air": 0.5752, "f400_air": 0.6288, "cone": "sc"}},
+                         "B2": {"tga": {"r_max_air": 0.5752, "f400_air": 0.6288, "cone": "sc"}}},
+               "note": "시료: FT-IR PIR · 콘 준불연 기준 통과 · TGA r_max,air 0.575 %/°C, f₄₀₀,air 0.629"},
+        "E3": {"zones": {},
+               "note": "같은 시스템의 중공층 시험 2회: t₆₀₀ 1068 · 1091 s, 자립연소 0/2"}
+      }
+    },
+    {
+      "id": "C",
+      "name": "주상복합",
+      "form": "25층 · 1–3층 근린생활(석재·커튼월) · 4–25층 주거(금속복합패널)",
+      "N": 25, "h": 3.0, "permit": "2009", "use": "주상복합",
+      "sprinkler": true,
+      "piloti": null,
+      "zones": [
+        {"id": "C1", "name": "저층부 근린생활", "col": "주동", "b": 1, "t": 3, "type": "NC", "use": "com",
+         "area": 800, "occ_band": 20, "win": 1.0, "gap": true, "ext": [{"src": "adjacent", "count": 1}],
+         "evidence": "E1", "note": "현장: 석재 + 커튼월, 층간 틈 방화 미흡"},
+        {"id": "C2", "name": "고층부 전·후면(주거)", "col": "주동", "b": 4, "t": 25, "type": "ACP_PE", "use": "res",
+         "n_u": 4, "occ_band": 5, "win": 1.0,
+         "evidence": "E2", "note": "시료: FT-IR PE 심재 · 콘 기준 미달 → 가연"},
+        {"id": "C3", "name": "고층부 측면(주거)", "col": "측면", "b": 4, "t": 25, "type": "ACP_PE", "use": "res",
+         "n_u": 2, "occ_band": 2.5, "win": 0.4,
+         "evidence": "E2", "note": "같은 패널"}
+      ]
+    }
+  ]
+}
